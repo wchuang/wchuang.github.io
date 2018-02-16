@@ -1,2 +1,7 @@
 _site
 .sass-cache
+.code-highlighter-cache
+.gist-cache
+bin
+.bundle
+.deploy
