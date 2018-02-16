@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Frank&#39;s blog</title>
+    <description>My name is Frank, an iOS developer from Taiwan.  Currently, I work and live in Shanghai, China. I have 6+ years iOS and few backend development experience, I love and focus on Objective-C, Swift, Node.js and Golang.
+</description>
+    <link>http://blog.wchuang.me/</link>
+    <atom:link href="http://blog.wchuang.me/feed.xml" rel="self" type="application/rss+xml" />
+    <pubDate>Sat, 17 Feb 2018 02:15:51 +0800</pubDate>
+    <lastBuildDate>Sat, 17 Feb 2018 02:15:51 +0800</lastBuildDate>
+    <generator>Jekyll v2.4.0</generator>
+    
+      <item>
+        <title>Welcome to Jekyll!</title>
+        <description>&lt;p&gt;You’ll find this post in your &lt;code&gt;_posts&lt;/code&gt; directory. Go ahead and edit it and re-build the site to see your changes. You can rebuild the site in many different ways, but the most common way is to run &lt;code&gt;jekyll serve --watch&lt;/code&gt;, which launches a web server and auto-regenerates your site when a file is updated.&lt;/p&gt;
+
+&lt;p&gt;To add new posts, simply add a file in the &lt;code&gt;_posts&lt;/code&gt; directory that follows the convention &lt;code&gt;YYYY-MM-DD-name-of-post.ext&lt;/code&gt; and includes the necessary front matter. Take a look at the source for this post to get an idea about how it works.&lt;/p&gt;
+
+&lt;p&gt;Jekyll also offers powerful support for code snippets:&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;print_hi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Hi, &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;print_hi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;Tom&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;#=&amp;gt; prints &amp;#39;Hi, Tom&amp;#39; to STDOUT.&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Check out the &lt;a href=&quot;http://jekyllrb.com&quot;&gt;Jekyll docs&lt;/a&gt; for more info on how to get the most out of Jekyll. File all bugs/feature requests at &lt;a href=&quot;https://github.com/jekyll/jekyll&quot;&gt;Jekyll’s GitHub repo&lt;/a&gt;. If you have questions, you can ask them on &lt;a href=&quot;https://github.com/jekyll/jekyll-help&quot;&gt;Jekyll’s dedicated Help repository&lt;/a&gt;.&lt;/p&gt;
+
+</description>
+        <pubDate>Fri, 26 Jan 2018 02:37:00 +0000</pubDate>
+        <link>http://blog.wchuang.me/2018/01/26/welcome-to-jekyll/</link>
+        <guid isPermaLink="true">http://blog.wchuang.me/2018/01/26/welcome-to-jekyll/</guid>
+        
+        
+        <category>jekyll</category>
+        
+        <category>update</category>
+        
+      </item>
+    
+      <item>
+        <title>PresentViewController delay on UITableViewCell</title>
+        <description>&lt;p&gt;最近開發常常遇到：當點選 UITableViewCell 時去呼叫 presentViewController:animated:completion:，欲開啟的 view controller 會延遲出現的問題，這個似乎是 iOS 7 的 bug，不過之前開發手機卻沒什麼遇到，直到最近開發 iPad 才發現。&lt;/p&gt;
+
+&lt;p&gt;原因是當 UITableViewCell 的 selectionStyle 設為 UITableViewCellSelectionStyleNone，也就是希望不要出現點選效果時，造成沒有動畫效果去觸發 main runloop，所以 thread 好像是睡著了…&lt;/p&gt;
+
+&lt;p&gt;解決方式：&lt;/p&gt;
+
+&lt;p&gt;在呼叫 presentViewController:animated:completion: 後&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;呼叫 CFRunLoopWakeUp(CFRunLoopGetCurrent())&lt;/li&gt;
+  &lt;li&gt;或用 GCD 在 main queue 執行一個空的 block：dispatch_async(dispatch_get_main_queue(), ^{})&lt;/li&gt;
+  &lt;li&gt;或用 GCD 在 main queue 直接呼叫 presentViewController:animated:completion:&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;From: &lt;a href=&quot;http://stackoverflow.com/questions/21075540/presentviewcontrolleranimatedyes-view-will-not-appear-until-user-taps-again&quot;&gt;Stackoverflow 討論&lt;/a&gt;, &lt;a href=&quot;https://developer.apple.com/library/ios/documentation/Cocoa/Conceptual/Multithreading/RunLoopManagement/RunLoopManagement.html&quot;&gt;Thread run loops&lt;/a&gt;&lt;/p&gt;
+</description>
+        <pubDate>Sun, 22 Nov 2015 02:36:24 +0800</pubDate>
+        <link>http://blog.wchuang.me/2015/11/22/presentviewcontroller-delay-on-uitableviewcell/</link>
+        <guid isPermaLink="true">http://blog.wchuang.me/2015/11/22/presentviewcontroller-delay-on-uitableviewcell/</guid>
+        
+        
+        <category>ios</category>
+        
+        <category>uitableview</category>
+        
+        <category>uitableviewcell</category>
+        
+      </item>
+    
+      <item>
+        <title>Custom NSLog</title>
+        <description>&lt;pre&gt;&lt;code&gt;#ifdef DEBUG
+#   define DLog(fmt, ...) NSLog((@&quot;%s [Line %d] &quot; fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__);
+#else
+#   define DLog(...)
+#endif
+
+#define ALog(fmt, ...) NSLog((@&quot;%s [Line %d] &quot; fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__);
+
+#ifdef DEBUG
+#   define ULog(fmt, ...)  { UIAlertView *alert = [[UIAlertView alloc] initWithTitle:[NSString stringWithFormat:@&quot;%s\n [Line %d] &quot;, __PRETTY_FUNCTION__, __LINE__] message:[NSString stringWithFormat:fmt, ##__VA_ARGS__]  delegate:nil cancelButtonTitle:@&quot;Ok&quot; otherButtonTitles:nil]; [alert show]; }
+#else
+#   define ULog(...)
+#endif
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;加入以上的 code 到 .pch 檔。&lt;/p&gt;
+
+&lt;p&gt;這邊定義了三種不同的 log 方式&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;DLog：相當於 NSLog，但它只有在 DEBUG 模式中才可以被使用。相較於 NSLog，自訂的 function 名稱及程式碼行數也會印出來。&lt;/li&gt;
+  &lt;li&gt;ALog：等同 NSLog，function 名稱及程式碼行數也會印出來。&lt;/li&gt;
+  &lt;li&gt;ULog：等於用 UIAlertView 印出 DLog。&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        <pubDate>Wed, 14 Oct 2015 01:21:14 +0800</pubDate>
+        <link>http://blog.wchuang.me/2015/10/14/custom-nslog/</link>
+        <guid isPermaLink="true">http://blog.wchuang.me/2015/10/14/custom-nslog/</guid>
+        
+        
+        <category>ios</category>
+        
+      </item>
+    
+      <item>
+        <title>Distribute an iOS application OTA</title>
+        <description>&lt;p&gt;簡單記錄如何建立給外部使用者或客戶測試的 AdHoc 版本&lt;/p&gt;
+
+&lt;p&gt;iOS app OTA (over the air)，&lt;/p&gt;
+
+&lt;p&gt;而如何產生憑證及 archive 出 AdHoc 就不再贅述了，網路也有很多資源。&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;重要的是描述下載位置的 HTML、描述 app 的 plist 檔案以及 app 的 .ipa 檔案，找台伺服器來存放它們吧！這邊推薦使用 Dropbox 方便又好用，當然你也可以用自家 server 或其它 web storage services。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;.ipa 檔：AdHoc 出 .ipa 檔案，並上傳到 Dropbox 底下，點選分享後，會拿到一個分享連結，如 https://www.dropbox.com/s/ooxxaabbcc/ForTestingApp.ipa?dl=0 ，把 www.dropbox.com 改成 dl.dropboxusercontent.com 及 ?dl=0 拿掉，會變成 -&amp;gt; https://dl.dropboxusercontent.com/s/ooxxaabbcc/ForTestingApp.ipa 。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;plist 檔：加入一個 Array 的 key，名稱取為 assets，負責描述 .ipa、app icon 兩張（57 * 57）及 (512 * 512) 的分享連結路徑 (與上述 .ipa 檔案ㄧ樣，需放在 dropbox 中，並開啟分享取得連結)，如果不放圖片的話，下載中就看不到 app 的 icon 囉。再加入一個 Dictionary 的 key，名稱取為 metadata，描述 app 相關資訊，如 bundle-identifier、title 或 subtitle 等等。最後一樣開啟分享取得連結。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;HTML 檔：最後是 HTML，拿來記錄上述 plist 檔的分享位置，並做個畫面呈現給使用者點選下載，可以簡單放上下列程式。&lt;/p&gt;
+
+ 	&lt;a href=&quot;itms-services://?action=download-manifest&amp;amp;url=  	https://dl.dropboxusercontent.com/s/ooxxaabbcc/ForTestingApp.plist&quot;&gt;
+ 	Install this awesome app!&lt;/a&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;完成後你就可以把 HTML 的連結給你的朋友或客戶測試囉，不過要記得把手機的 UDID 加進去 Provisioning Profile。&lt;/p&gt;
+
+&lt;p&gt;以上，有不清楚的地方歡迎指教 :p&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 08 Apr 2015 00:53:56 +0800</pubDate>
+        <link>http://blog.wchuang.me/2015/04/08/distribute-an-ios-application-ota/</link>
+        <guid isPermaLink="true">http://blog.wchuang.me/2015/04/08/distribute-an-ios-application-ota/</guid>
+        
+        
+        <category>ios</category>
+        
+        <category>ota</category>
+        
+        <category>adhoc</category>
+        
+        <category>distribute</category>
+        
+      </item>
+    
+      <item>
+        <title>[UIView viewWithTag:]</title>
+        <description>&lt;p&gt;這篇關於使用 [UIView viewWithTag:] 的文章，雖然已是兩年前的，但在下認為文章內所提及的觀念與用法還是很值得與大家分享。&lt;/p&gt;
+
+&lt;p&gt;UIView 有個 tag 屬性以及相對應的方法 -viewWithTag:，讓我們可以輕易的存取特定的 view，而不需要額外的 reference。&lt;/p&gt;
+
+&lt;p&gt;這邊作者分享了幾個使用上常見的問題：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;不要使用 tags 來儲存資料，例如：陣列存取物件的索引 (index)…，因為這是一件容易造成後續維護者難以理解你的 code 的一件事…底下是一個使用 button 來呈現圖片縮圖的例子，為了記得哪個按鈕被按到以及要呈現哪個對應於 array 中的圖片索引，所以利用 tag 來記錄。~~(但其實還滿容易這麼幹的啊…在下也常這麼做，要好好檢討了orz)~~&lt;/p&gt;
+
+    &lt;pre&gt;&lt;code&gt;  - (void)configureThumbnailButton:(UIButton *)thumbnailButton 
+                          forPhoto:(NSUInteger)photoIndex {
+  		// ...
+  	thumbnailButton.tag = 1 + photoIndex;
+  		// ...
+  }
+
+  - (void)thumbnailButtonTapped:(id)sender {
+  		UIButton *thumbnailButton = sender;
+  		NSUInteger photoIndex = thumbnailButton.tag - 1;
+  		id selectedPhoto = [self.photoArray objectAtIndex:photoIndex];
+  		[self showPhoto:selectedPhoto];
+  }
+&lt;/code&gt;&lt;/pre&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;存取 view 額外資料的幾個比較正確的方式：&lt;/p&gt;
+
+    &lt;p&gt;我們來探討一下為什麼會寫出上述例子的程式碼，其實也只是想要知道 button 對應的 index，或是 button 真正對應的圖片縮圖，此時更適合的方式應該是另外做一個 custom subClass 來儲存這些有用的額外資料，延續上述例子，應該可以這麼做：&lt;/p&gt;
+
+    &lt;pre&gt;&lt;code&gt;  @interface PhotoThumbnailButton : UIButton
+
+  @property (nonatomic, assign) NSInteger photoIndex;
+  // OR
+  @property (nonatomic, strong) Photo *photo;
+
+  @end
+&lt;/code&gt;&lt;/pre&gt;
+
+    &lt;p&gt;這時候你會說，如果每次都要這樣也太麻煩了吧！的確，每次都要建個 subClass 有時可能不符合實際情況，底下也提供一個用法：Associated references。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;a href=&quot;http://goo.gl/6fM6Kq&quot;&gt;Associated references&lt;/a&gt;：提供了 objc_getAssociatedObject 以及 objc_setAssociatedObject 等方法，可以利用特定的 key 及 policy 存取特定的 obejct。如：&lt;/p&gt;
+
+    &lt;pre&gt;&lt;code&gt;  #import &amp;lt;objc/runtime.h&amp;gt;
+
+  static char kThumbnailButtonAssociatedPhotoKey;
+
+  // ...
+
+  - (void)setAssociatedPhoto:(Photo *)associatedPhoto
+          forThumbnailButton:(UIButton *)thumbnailButton {
+  		objc_setAssociatedObject(thumbnailButton,
+  		                         &amp;amp;kThumbnailButtonAssociatedPhotoKey,
+                               associatedPhoto,
+                               OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+  }
+
+  - (Photo *)associatedPhotoForThumbnailButton:(UIButton *)thumbnailButton {
+      return objc_getAssociatedObject(thumbnailButton,
+                              		 &amp;amp;kThumbnailButtonAssociatedPhotoKey);
+  }
+&lt;/code&gt;&lt;/pre&gt;
+
+    &lt;p&gt;存取時，&lt;/p&gt;
+
+    &lt;pre&gt;&lt;code&gt;	- (void)configureThumbnailButtonForPhoto:(Photo *)photo {
+  		// ...
+  		[self setAssociatedPhoto:photo forThumbnailButton:thumbnailButton];
+  		// ...
+  }
+
+  - (void)thumbnailButtonTapped {
+  		Photo *photo = [self associatedPhotoForThumbnailButton:thumbnailButton];
+  		// ...
+  }
+&lt;/code&gt;&lt;/pre&gt;
+
+    &lt;p&gt;真的是很酷啊… 可是，如果只是想要快速直接的知道是哪一個 view，這樣的方式還是不夠直覺…所以，有些情況下，你還是會想直接利用 UIView’s tag 存取，但重點是請遵循 UIView’s tag 是 UIView 的唯一識別、可讀性以及易維護性的觀念，而使用 #define 或 enum value 來設定 tags，在你之後的開發者會很感謝你的..XD，例如：&lt;/p&gt;
+
+    &lt;pre&gt;&lt;code&gt;  enum MyViewTags {
+      kTitleLabelTag = 1,
+  		kSendButtonTag,
+  		kSomeOtherViewTag
+  };
+
+  // ...
+
+  if (sender.tag == kSendButtonTag) {
+  		// ...
+  }
+&lt;/code&gt;&lt;/pre&gt;
+  &lt;/li&gt;
+  &lt;li&gt;結論：
+    &lt;ul&gt;
+      &lt;li&gt;不要使用 tags 來儲存資料 -&amp;gt; use sub-class or associated references resolving this.&lt;/li&gt;
+      &lt;li&gt;多利用 public properties of sub-class for getting references of subviews.&lt;/li&gt;
+      &lt;li&gt;If you do use tags, do not use magic numbers. Use named constants.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://goo.gl/0xHqWt&quot;&gt;Ref.&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+</description>
+        <pubDate>Tue, 11 Nov 2014 01:46:01 +0800</pubDate>
+        <link>http://blog.wchuang.me/2014/11/11/uiview-viewwithtag/</link>
+        <guid isPermaLink="true">http://blog.wchuang.me/2014/11/11/uiview-viewwithtag/</guid>
+        
+        
+        <category>viewwithtag</category>
+        
+        <category>uiview</category>
+        
+        <category>objective-c</category>
+        
+        <category>ios</category>
+        
+        <category>uikit</category>
+        
+      </item>
+    
+  </channel>
+</rss>
