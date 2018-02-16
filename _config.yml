@@ -1,11 +1,9 @@
 # Site settings
-title: Frank's blog - 法蘭克先生
+title: Frank's blog - Developer, coffee lover and traveler
 email: ijamhh@gmail.com
 description: > # this means to ignore newlines until "baseurl:"
   My name is Frank, an iOS developer from Taiwan. 
   Currently, I work and live in Shanghai, China.
-  I have 6+ years iOS and few backend development experience,
-  I love and focus on Objective-C, Swift, Node.js and Golang.
 baseurl: "" # the subpath of your site, e.g. /blog/
 url: "http://blog.wchuang.me" # the base hostname & protocol for your site
 twitter_username: huang_wc
