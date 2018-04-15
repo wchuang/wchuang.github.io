@@ -61,7 +61,8 @@ The folder structure will look like this:
 
 # Add custom files as you need #
 
-### Dynamic frameworks ###
+
+#### Dynamic frameworks ####
 
 You can use some dependency frameworks through Podfile,
 for example,
@@ -86,7 +87,7 @@ for example,
 
 then run `pod install`, that will fetch the AFNetworking library into the Pods folder.
 
-### Static frameworks ###
+#### Static frameworks ####
 
 If there are no Pod resource support, you can add the library into the Pods folder by manually.
 
@@ -99,9 +100,10 @@ For example,
 	
 then run `pod install`, that will generate the AliPay_SDK library dependency on Xcode.
 
-### Wrappers files ###
+#### Wrappers files ####
 
 You can new some wrapper files on Classes folder that will handle those libraries for usage more easier.
+
 
 # Push the Pod source code #
 
@@ -141,7 +143,7 @@ You can run _pod repo push POD_NAME YOUR_PODSPEC_FILE --verbose --use-libraries 
 
 ### Reference ###
 
-* [Podspec Syntax Reference] (https://guides.cocoapods.org/syntax/podspec.html#specification)
-* [Using Pod Lib Create] (https://guides.cocoapods.org/making/using-pod-lib-create)
-* [Private Pods] (https://guides.cocoapods.org/making/private-cocoapods)
-* [Semantic Versioning 2.0.0] (https://semver.org/)
+* [Podspec Syntax Reference](https://guides.cocoapods.org/syntax/podspec.html#specification)
+* [Using Pod Lib Create](https://guides.cocoapods.org/making/using-pod-lib-create)
+* [Private Pods](https://guides.cocoapods.org/making/private-cocoapods)
+* [Semantic Versioning 2.0.0](https://semver.org/)
