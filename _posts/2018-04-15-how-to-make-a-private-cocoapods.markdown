@@ -111,7 +111,7 @@ After you finished features development and write some descriptions on README.md
 
 You need to commit and tag a version number, then push the source code to the remote repository.
 
-We suggest that the tag number should be equal to the PodSpec version number and follow [Semantic version define] (https://semver.org/).
+We suggest that the tag number should be equal to the PodSpec version number and follow [Semantic version define](https://semver.org/).
 
 For example,
 
@@ -135,11 +135,11 @@ Save your PodSpec file and add to the repo:
 
 Once we modified the Pod library, we need to change the version number on PodSpec file.
 
-Before you deploy the Pod library, you need to commit, bump up tag version number and push source code to the remote repo under source control..
+Before you deploy the Pod library, you need to commit, bump up tag version number and push source code to the remote repo under source control.
 
-If you facing a problem about _The TestPro.podspec specification does not validate._ when running _pod repo push POD_NAME YOUR_PODSPEC_FILE_.
+If you facing a problem about `The TestPro.podspec specification does not validate.` when running `pod repo push POD_NAME YOUR_PODSPEC_FILE`.
 
-You can run _pod repo push POD_NAME YOUR_PODSPEC_FILE --verbose --use-libraries --allow-warnings_ to resolve it.
+You can run `pod repo push POD_NAME YOUR_PODSPEC_FILE --verbose --use-libraries --allow-warnings` to resolve it.
 
 ### Reference ###
 
