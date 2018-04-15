@@ -6,8 +6,8 @@
 </description>
     <link>http://blog.wchuang.me/</link>
     <atom:link href="http://blog.wchuang.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 15 Apr 2018 16:53:29 +0800</pubDate>
-    <lastBuildDate>Sun, 15 Apr 2018 16:53:29 +0800</lastBuildDate>
+    <pubDate>Sun, 15 Apr 2018 17:20:27 +0800</pubDate>
+    <lastBuildDate>Sun, 15 Apr 2018 17:20:27 +0800</lastBuildDate>
     <generator>Jekyll v2.4.0</generator>
     
       <item>
@@ -74,7 +74,7 @@ The basic pod library is born.&lt;/p&gt;
 
 &lt;h1 id=&quot;add-custom-files-as-you-need&quot;&gt;Add custom files as you need&lt;/h1&gt;
 
-&lt;h3 id=&quot;dynamic-frameworks&quot;&gt;Dynamic frameworks&lt;/h3&gt;
+&lt;h4 id=&quot;dynamic-frameworks&quot;&gt;Dynamic frameworks&lt;/h4&gt;
 
 &lt;p&gt;You can use some dependency frameworks through Podfile,
 for example,&lt;/p&gt;
@@ -100,7 +100,7 @@ end
 
 &lt;p&gt;then run &lt;code&gt;pod install&lt;/code&gt;, that will fetch the AFNetworking library into the Pods folder.&lt;/p&gt;
 
-&lt;h3 id=&quot;static-frameworks&quot;&gt;Static frameworks&lt;/h3&gt;
+&lt;h4 id=&quot;static-frameworks&quot;&gt;Static frameworks&lt;/h4&gt;
 
 &lt;p&gt;If there are no Pod resource support, you can add the library into the Pods folder by manually.&lt;/p&gt;
 
@@ -114,7 +114,7 @@ s.dependency &#39;AliPay_SDK&#39;
 
 &lt;p&gt;then run &lt;code&gt;pod install&lt;/code&gt;, that will generate the AliPay_SDK library dependency on Xcode.&lt;/p&gt;
 
-&lt;h3 id=&quot;wrappers-files&quot;&gt;Wrappers files&lt;/h3&gt;
+&lt;h4 id=&quot;wrappers-files&quot;&gt;Wrappers files&lt;/h4&gt;
 
 &lt;p&gt;You can new some wrapper files on Classes folder that will handle those libraries for usage more easier.&lt;/p&gt;
 
@@ -158,10 +158,10 @@ git push --tags
 &lt;h3 id=&quot;reference&quot;&gt;Reference&lt;/h3&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;[Podspec Syntax Reference] (https://guides.cocoapods.org/syntax/podspec.html#specification)&lt;/li&gt;
-  &lt;li&gt;[Using Pod Lib Create] (https://guides.cocoapods.org/making/using-pod-lib-create)&lt;/li&gt;
-  &lt;li&gt;[Private Pods] (https://guides.cocoapods.org/making/private-cocoapods)&lt;/li&gt;
-  &lt;li&gt;[Semantic Versioning 2.0.0] (https://semver.org/)&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://guides.cocoapods.org/syntax/podspec.html#specification&quot;&gt;Podspec Syntax Reference&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://guides.cocoapods.org/making/using-pod-lib-create&quot;&gt;Using Pod Lib Create&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://guides.cocoapods.org/making/private-cocoapods&quot;&gt;Private Pods&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://semver.org/&quot;&gt;Semantic Versioning 2.0.0&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 </description>
         <pubDate>Sun, 15 Apr 2018 15:35:29 +0800</pubDate>
