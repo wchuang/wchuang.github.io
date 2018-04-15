@@ -6,8 +6,8 @@
 </description>
     <link>http://blog.wchuang.me/</link>
     <atom:link href="http://blog.wchuang.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 15 Apr 2018 17:20:27 +0800</pubDate>
-    <lastBuildDate>Sun, 15 Apr 2018 17:20:27 +0800</lastBuildDate>
+    <pubDate>Sun, 15 Apr 2018 18:38:04 +0800</pubDate>
+    <lastBuildDate>Sun, 15 Apr 2018 18:38:04 +0800</lastBuildDate>
     <generator>Jekyll v2.4.0</generator>
     
       <item>
@@ -124,7 +124,7 @@ s.dependency &#39;AliPay_SDK&#39;
 
 &lt;p&gt;You need to commit and tag a version number, then push the source code to the remote repository.&lt;/p&gt;
 
-&lt;p&gt;We suggest that the tag number should be equal to the PodSpec version number and follow [Semantic version define] (https://semver.org/).&lt;/p&gt;
+&lt;p&gt;We suggest that the tag number should be equal to the PodSpec version number and follow &lt;a href=&quot;https://semver.org/&quot;&gt;Semantic version define&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;For example,&lt;/p&gt;
 
@@ -149,11 +149,11 @@ git push --tags
 
 &lt;p&gt;Once we modified the Pod library, we need to change the version number on PodSpec file.&lt;/p&gt;
 
-&lt;p&gt;Before you deploy the Pod library, you need to commit, bump up tag version number and push source code to the remote repo under source control..&lt;/p&gt;
+&lt;p&gt;Before you deploy the Pod library, you need to commit, bump up tag version number and push source code to the remote repo under source control.&lt;/p&gt;
 
-&lt;p&gt;If you facing a problem about &lt;em&gt;The TestPro.podspec specification does not validate.&lt;/em&gt; when running &lt;em&gt;pod repo push POD_NAME YOUR_PODSPEC_FILE&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;If you facing a problem about &lt;code&gt;The TestPro.podspec specification does not validate.&lt;/code&gt; when running &lt;code&gt;pod repo push POD_NAME YOUR_PODSPEC_FILE&lt;/code&gt;.&lt;/p&gt;
 
-&lt;p&gt;You can run &lt;em&gt;pod repo push POD_NAME YOUR_PODSPEC_FILE –verbose –use-libraries –allow-warnings&lt;/em&gt; to resolve it.&lt;/p&gt;
+&lt;p&gt;You can run &lt;code&gt;pod repo push POD_NAME YOUR_PODSPEC_FILE --verbose --use-libraries --allow-warnings&lt;/code&gt; to resolve it.&lt;/p&gt;
 
 &lt;h3 id=&quot;reference&quot;&gt;Reference&lt;/h3&gt;
 
