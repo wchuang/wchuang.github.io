@@ -6,9 +6,170 @@
 </description>
     <link>http://blog.wchuang.me/</link>
     <atom:link href="http://blog.wchuang.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 17 Feb 2018 02:35:38 +0800</pubDate>
-    <lastBuildDate>Sat, 17 Feb 2018 02:35:38 +0800</lastBuildDate>
+    <pubDate>Sun, 15 Apr 2018 16:53:29 +0800</pubDate>
+    <lastBuildDate>Sun, 15 Apr 2018 16:53:29 +0800</lastBuildDate>
     <generator>Jekyll v2.4.0</generator>
+    
+      <item>
+        <title>How to Make a Private CocoaPods</title>
+        <description>&lt;h1 id=&quot;overview&quot;&gt;Overview&lt;/h1&gt;
+
+&lt;p&gt;CocoaPods is a great tool not only for adding open source code to your project, but also for sharing components across projects.&lt;/p&gt;
+
+&lt;p&gt;This post will describe how to make a private CocoaPods for your application.
+You will need a private spec repository, letting CocoaPods know where to find it and adding the PodSpecs file to the repo.&lt;/p&gt;
+
+&lt;p&gt;Also, you will need a private repository that stores the source code of your pod library and an example project (if you have).&lt;/p&gt;
+
+&lt;h1 id=&quot;pod-creation&quot;&gt;Pod Creation&lt;/h1&gt;
+
+&lt;p&gt;We use &lt;code&gt;pod lib create YOUR_PROJECT_NAME&lt;/code&gt; command to bootstrap the process.
+That will automatic generate an entire project by asking you few questions.&lt;/p&gt;
+
+&lt;p&gt;For example,&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;What platform do you want to use? [iOS/macOS] -&amp;gt; iOS&lt;/li&gt;
+  &lt;li&gt;What language do you want to use? [Swift/ObjC] -&amp;gt; ObjC&lt;/li&gt;
+  &lt;li&gt;Would you like to inculde a demo application with your library? [Yes/No] -&amp;gt; Yes&lt;/li&gt;
+  &lt;li&gt;Which testing frameworks will you use? [Specta/Kiwi/None] -&amp;gt; None&lt;/li&gt;
+  &lt;li&gt;Would you like to view based testing? [Yes/No] -&amp;gt; No&lt;/li&gt;
+  &lt;li&gt;What is your class prefix? -&amp;gt; FF&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h1 id=&quot;directory-of-the-pod-project&quot;&gt;Directory of the Pod project&lt;/h1&gt;
+
+&lt;p&gt;If you finish the few questions, running &lt;code&gt;pod install&lt;/code&gt; on the example folder.
+The basic pod library is born.&lt;/p&gt;
+
+&lt;p&gt;You can add your dependency libraries you need like AFNetworking on Podfile or some static frameworks.&lt;/p&gt;
+
+&lt;p&gt;The folder structure will look like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;TestPro 
+├── Example 
+│   ├── Podfile 
+│   ├── Podfile.lock 
+│   ├── Pods 
+│   ├── TestPro 
+│   ├── TestPro.xcodeproj 
+│   ├── TestPro.xcworkspace 
+│   └── Tests 
+├── LICENSE 
+├── README.md 
+├── TestPro 
+│   ├── Assets 
+│   └── Classes 
+├── TestPro.podspec 
+└── _Pods.xcodeproj -&amp;gt; Example/Pods/Pods.xcodeproj
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;_Pods.xcodeproj: A symlink to your Pod’s project for Carthage support.&lt;/li&gt;
+  &lt;li&gt;TestPro.podspec: The PodSpec of your library, you can add some formulas such as spec name, spec version or the path of source files, and so on. You can find more syntax information on Reference section below.&lt;/li&gt;
+  &lt;li&gt;Assets &amp;amp; Classes: That contains all .swift/.h/.m files and images you will need.&lt;/li&gt;
+  &lt;li&gt;Pods folder: That stores the external pod libaries you need, including a dynamic framework be installed from Podfile or a static framework you added manually.&lt;/li&gt;
+  &lt;li&gt;Example folder: That stores the example project using the Pod library.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;add-custom-files-as-you-need&quot;&gt;Add custom files as you need&lt;/h1&gt;
+
+&lt;h3 id=&quot;dynamic-frameworks&quot;&gt;Dynamic frameworks&lt;/h3&gt;
+
+&lt;p&gt;You can use some dependency frameworks through Podfile,
+for example,&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;source &#39;https://github.com/CocoaPods/Specs.git&#39; 
+
+platform :ios, &#39;8.0&#39; 
+use_frameworks! 
+
+inhibit_all_warnings! 
+
+target &#39;TestPro_Example&#39; do 
+
+	pod &#39;TestPro&#39;, :path =&amp;gt; &#39;../&#39; 
+	pod &#39;AFNetworking&#39; 
+	
+	target &#39;TestPro_Tests&#39; do 
+		inherit! :search_paths 
+	end 
+	
+end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;then run &lt;code&gt;pod install&lt;/code&gt;, that will fetch the AFNetworking library into the Pods folder.&lt;/p&gt;
+
+&lt;h3 id=&quot;static-frameworks&quot;&gt;Static frameworks&lt;/h3&gt;
+
+&lt;p&gt;If there are no Pod resource support, you can add the library into the Pods folder by manually.&lt;/p&gt;
+
+&lt;p&gt;Then modify the PodSpec file by adding static_framework and dependency.&lt;/p&gt;
+
+&lt;p&gt;For example,&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;s.static_framework = true 
+s.dependency &#39;AliPay_SDK&#39;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;then run &lt;code&gt;pod install&lt;/code&gt;, that will generate the AliPay_SDK library dependency on Xcode.&lt;/p&gt;
+
+&lt;h3 id=&quot;wrappers-files&quot;&gt;Wrappers files&lt;/h3&gt;
+
+&lt;p&gt;You can new some wrapper files on Classes folder that will handle those libraries for usage more easier.&lt;/p&gt;
+
+&lt;h1 id=&quot;push-the-pod-source-code&quot;&gt;Push the Pod source code&lt;/h1&gt;
+
+&lt;p&gt;After you finished features development and write some descriptions on README.md file.&lt;/p&gt;
+
+&lt;p&gt;You need to commit and tag a version number, then push the source code to the remote repository.&lt;/p&gt;
+
+&lt;p&gt;We suggest that the tag number should be equal to the PodSpec version number and follow [Semantic version define] (https://semver.org/).&lt;/p&gt;
+
+&lt;p&gt;For example,&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;git add . 
+git commit -m &#39;First release&#39; 
+git tag &#39;1.0.0&#39; 
+git push origin master 
+git push --tags
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h1 id=&quot;deploy-the-pod-library&quot;&gt;Deploy the Pod library&lt;/h1&gt;
+
+&lt;p&gt;Using the URL of your private spec repository, adding your repo using:&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;pod repo add POD_NAME THE_URL_OF_SPEC_REPOSITORY&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Save your PodSpec file and add to the repo:&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;pod repo push POD_NAME YOUR_PODSPEC_FILE&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h1 id=&quot;pod-update&quot;&gt;Pod update&lt;/h1&gt;
+
+&lt;p&gt;Once we modified the Pod library, we need to change the version number on PodSpec file.&lt;/p&gt;
+
+&lt;p&gt;Before you deploy the Pod library, you need to commit, bump up tag version number and push source code to the remote repo under source control..&lt;/p&gt;
+
+&lt;p&gt;If you facing a problem about &lt;em&gt;The TestPro.podspec specification does not validate.&lt;/em&gt; when running &lt;em&gt;pod repo push POD_NAME YOUR_PODSPEC_FILE&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;You can run &lt;em&gt;pod repo push POD_NAME YOUR_PODSPEC_FILE –verbose –use-libraries –allow-warnings&lt;/em&gt; to resolve it.&lt;/p&gt;
+
+&lt;h3 id=&quot;reference&quot;&gt;Reference&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;[Podspec Syntax Reference] (https://guides.cocoapods.org/syntax/podspec.html#specification)&lt;/li&gt;
+  &lt;li&gt;[Using Pod Lib Create] (https://guides.cocoapods.org/making/using-pod-lib-create)&lt;/li&gt;
+  &lt;li&gt;[Private Pods] (https://guides.cocoapods.org/making/private-cocoapods)&lt;/li&gt;
+  &lt;li&gt;[Semantic Versioning 2.0.0] (https://semver.org/)&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        <pubDate>Sun, 15 Apr 2018 15:35:29 +0800</pubDate>
+        <link>http://blog.wchuang.me/2018/04/15/how-to-make-a-private-cocoapods/</link>
+        <guid isPermaLink="true">http://blog.wchuang.me/2018/04/15/how-to-make-a-private-cocoapods/</guid>
+        
+        
+      </item>
     
       <item>
         <title>PresentViewController delay on UITableViewCell</title>
