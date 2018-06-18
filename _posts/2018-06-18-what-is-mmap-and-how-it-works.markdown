@@ -4,11 +4,11 @@ title: "What Is Mmap and How It Works?"
 date: 2018-06-18T17:17:35+08:00
 ---
 
-#前言
+#前言#
 
 MMAP(Memory-mapped file), 是一種源於 Unix/Linux 作業系統內存映射文件的方法，主要用於**增加 I/O 存取效能**，尤其大文件效果更顯著。它在進程 process 中開闢一段**[虛擬內存](https://zh.wikipedia.org/wiki/%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98)***逐一字節的將一份文件或檔案從磁碟位置對應到該虛擬位置*，這樣使得 process 可以直接操作該虛擬內存，如同操作該文件，而不需要調用 read/write 等系統方法。同時也減少了一次從文件拷貝的動作。
 
-#原理
+#原理#
 
 mmap 實現原理主要分為三個階段：
 
@@ -46,11 +46,11 @@ mmap 實現原理主要分為三個階段：
 
     - Then the process can do read/write operations on main memory, if the data be changed, system will update those changed content in mapped disk address after a while. (You can use `msync` function to update data right now.)
 
-#函數介紹
+#函數介紹#
 
 `void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset);`
 
-#####參數
+#####參數#####
 
 - start: mapping virtual address space 的開始位置，如果傳入 NULL，kernal 會自動選擇 page-aligned address。
 
@@ -76,11 +76,11 @@ mmap 實現原理主要分為三個階段：
 
 - offset: 文件位移量。
 
-#####返回值
+#####返回值#####
 
 如果建立成功，會返回一個指標指向這個映射空間的位置。假設失敗，將會回傳 `MAP_FAILED (that is, (void *) -1)`，以及 `errno`。
 
-#與一般文件存取差異
+#與一般文件存取差異#
 
 一般文件調用過程：
 
@@ -92,7 +92,7 @@ mmap 實現原理主要分為三個階段：
 
 而使用 mmap，利用建立新的 virtual address space 以及磁碟位置與 virtual address space 的映射，沒有進行文件拷貝。直到訪問資料時造成 `Page Fault` 利用映射關係，**只進行一次的資料拷貝**，就從磁碟拷貝至 user-space，讓 process 得以使用。
 
-#優點
+#優點#
 
 1. 對文件存取繞過了 paging 技術操作，減少了資料的拷貝次數，並且利用 read/write in memory instead of I/O operations，大大提高效能。
 2. 內存映射文件可以只載入一部分內容到用戶空間，對於大型檔案非常有用。
@@ -100,11 +100,11 @@ mmap 實現原理主要分為三個階段：
 4. 可以達到跨 process 溝通通信。
 5. 避免因為大量的 data I/O 造成的記憶體不足問題，
 
-#如何確保不會讀到其他位址
+#如何確保不會讀到其他位址#
 
 MMAP 是利用自己的虛擬位址空間來處理 (必須先映射，否則無法透過 user-space 的虛擬記憶體存取)。所以其他 user-space 中的行程是沒辦法去存取這塊記憶體。因為其這塊超出的記憶體位址並沒有映射到它自己的虛擬記憶體位址，也因此當 user-space 存取超出的話，就會被作業系統踢出。
 
-#參考資料
+#參考資料#
 - [Wiki](https://zh.wikipedia.org/wiki/%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84%E6%96%87%E4%BB%B6)
 - [mmap分析](http://www.cnblogs.com/huxiao-tee/p/4660352.html)
 - [mmap函數說明](http://man7.org/linux/man-pages/man2/mmap.2.html)
