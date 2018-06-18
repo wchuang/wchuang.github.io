@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width initial-scale=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>What Is Mmap and How It Works?</title>
+    <meta name="description" content="My name is Frank, an iOS developer from Taiwan.  Currently, I work and live in Shanghai, China.
+">
+
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="canonical" href="http://blog.wchuang.me/2018/06/18/what-is-mmap-and-how-it-works/">
+</head>
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Frank's blog - Developer, coffee lover and traveler</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">What Is Mmap and How It Works?</h1>
+    <p class="post-meta">Jun 18, 2018</p>
+  </header>
+
+  <article class="post-content">
+    <h1 id="section">前言</h1>
+
+<p>MMAP(Memory-mapped file), 是一種源於 Unix/Linux 作業系統內存映射文件的方法，主要用於<strong>增加 I/O 存取效能</strong>，尤其大文件效果更顯著。它在進程 process 中開闢一段<strong><a href="https://zh.wikipedia.org/wiki/%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98">虛擬內存</a></strong><em>逐一字節的將一份文件或檔案從磁碟位置對應到該虛擬位置</em>，這樣使得 process 可以直接操作該虛擬內存，如同操作該文件，而不需要調用 read/write 等系統方法。同時也減少了一次從文件拷貝的動作。</p>
+
+<h1 id="section-1">原理</h1>
+
+<p>mmap 實現原理主要分為三個階段：</p>
+
+<ol>
+  <li>
+    <p>Start MMAP in process, creating a virtual mapping zone on virtual address space:</p>
+
+    <ul>
+      <li>
+        <p>Process request a <code>mmap</code> system fuction in user-space:</p>
+
+        <p><code>void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset);</code></p>
+      </li>
+      <li>
+        <p>Seek a continuous and idle virtual address space in vitual memory address of current process.</p>
+      </li>
+      <li>
+        <p>Allocate a <code>vm_area_struct</code> struct for this virtual address space, and initialize the struct.</p>
+      </li>
+      <li>
+        <p>Insert the struct to linked list or tree of virtual address space of process.</p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>Request a <code>mmap</code> system fuction in kernal-space, not in user-space, and implement the mapping relationship between the disk address of file and virtual address space of current process:</p>
+
+    <ul>
+      <li>
+        <p>After allocating a new virtual address space, it will find the file descriptor in file descriptor table by the pointer of un-mapped files. And link to the struct file of every un-mapped file through the file descriptor in kernal’s opened file set. Every struct file will maintain a opened file in kernal one by one.</p>
+      </li>
+      <li>
+        <p>Link to module of <code>file_operations</code> through the struct file and request function of <code>mmap</code> in kernal-space, not in user-space:</p>
+
+        <p><code>int mmap(struct file *filp, struct vm_area_struct *vma)</code></p>
+      </li>
+      <li>
+        <p><code>mmap</code> function in kernal will locate the file physical address in disk by <code>inode</code> module.</p>
+      </li>
+      <li>
+        <p>Build a mapping relationship table between the disk address of file and virtual address space of current process. However, there is no data mapping in main memory from virtual address space.</p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>Process start to read data on this virtual address space, that will occur <a href="https://zh.wikipedia.org/wiki/%E9%A1%B5%E7%BC%BA%E5%A4%B1"><code>Page Fault</code></a> and start copy document data from disk to main memory: (<strong>In step 1 and 2, there is only create virtual address space and compelte the mapping relationshop table, but the data do not copy into main memory yet. When starting read/write operations on process, just start to copy data.</strong>)</p>
+
+    <ul>
+      <li>
+        <p>When process start to read or write data on mapping address on virtual address space, it find that it is not found on memory page. Due to there is only build a mapping and the file data is not copy to memory, so it occurs <code>Page Fault</code>.</p>
+      </li>
+      <li>
+        <p>Kernal request a page fault handler after confirming there are no illegal operations.</p>
+      </li>
+      <li>
+        <p>Seek to the memory page in <code>swap cache</code>, if not find, it will request <code>nopage</code> function in order to create page from disk to main memory.</p>
+      </li>
+      <li>
+        <p>Then the process can do read/write operations on main memory, if the data be changed, system will update those changed content in mapped disk address after a while. (You can use <code>msync</code> function to update data right now.)</p>
+      </li>
+    </ul>
+  </li>
+</ol>
+
+<h1 id="section-2">函數介紹</h1>
+
+<p><code>void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset);</code></p>
+
+<h5 id="section-3">參數</h5>
+
+<ul>
+  <li>
+    <p>start: mapping virtual address space 的開始位置，如果傳入 NULL，kernal 會自動選擇 page-aligned address。</p>
+  </li>
+  <li>
+    <p>length: mapping space 長度。</p>
+  </li>
+  <li>
+    <p>prot: 內存保護機制。</p>
+
+    <pre><code>  PROT_EXEC  Pages may be executed.
+  PROT_READ  Pages may be read.
+  PROT_WRITE Pages may be written.
+  PROT_NONE  Pages may not be accessed.
+</code></pre>
+  </li>
+  <li>
+    <p>flags: 是否該映射區可以被其他 processes 看到。</p>
+
+    <pre><code>  MAP_SHARED Share this mapping.
+  MAP_SHARED_VALIDATE This flag provides the same behavior as MAP_SHARED except that MAP_SHARED mappings ignore unknown flags in flags.
+  MAP_PRIVATE Create a private copy-on-write mapping.
+  MAP_32BIT Put the mapping into the first 2 Gigabytes of the process address space. 
+  MAP_ANON Synonym for MAP_ANONYMOUS. Deprecated.
+  ...    
+</code></pre>
+  </li>
+  <li>
+    <p>fd: 文件描述詞。</p>
+  </li>
+  <li>
+    <p>offset: 文件位移量。</p>
+  </li>
+</ul>
+
+<h5 id="section-4">返回值</h5>
+
+<p>如果建立成功，會返回一個指標指向這個映射空間的位置。假設失敗，將會回傳 <code>MAP_FAILED (that is, (void *) -1)</code>，以及 <code>errno</code>。</p>
+
+<h1 id="section-5">與一般文件存取差異</h1>
+
+<p>一般文件調用過程：</p>
+
+<ol>
+  <li>Process 發起讀取文件請求。</li>
+  <li>Kernal 通過尋找 file descriptor in file descriptor table，並且利用 kernal 中已開啟的文件集中的文件資訊找到該文件的 <code>inode</code>。</li>
+  <li>判斷該文件是否在<a href="https://en.wikipedia.org/wiki/Page_cache">頁緩存 page cache</a> 中，如果存在則返回該文件內容。不存在則利用 <code>inode</code> 定位到 physical address in disk，並拷貝文件內容到頁緩存中。之後再發起讀頁面請求，將頁緩存的資訊給該 process。</li>
+</ol>
+
+<p>總而言之，一般文件讀取為了提高效率及保護磁碟，會利用頁緩存技術。這樣造成讀文件的時候，需要先將文件從磁碟拷貝到頁緩存，但由於頁緩存在 kernal-space 中，不能被 user-space 訪問，所以必須將資料從頁緩存再拷貝到 user-space。<strong>這樣進行了兩次的資料拷貝</strong>。</p>
+
+<p>而使用 mmap，利用建立新的 virtual address space 以及磁碟位置與 virtual address space 的映射，沒有進行文件拷貝。直到訪問資料時造成 <code>Page Fault</code> 利用映射關係，<strong>只進行一次的資料拷貝</strong>，就從磁碟拷貝至 user-space，讓 process 得以使用。</p>
+
+<h1 id="section-6">優點</h1>
+
+<ol>
+  <li>對文件存取繞過了 paging 技術操作，減少了資料的拷貝次數，並且利用 read/write in memory instead of I/O operations，大大提高效能。</li>
+  <li>內存映射文件可以只載入一部分內容到用戶空間，對於大型檔案非常有用。</li>
+  <li>實現了 user-space 及 kernal-space 的交互，兩空間的修改可以直接反映在映射區，並且被對方更新。</li>
+  <li>可以達到跨 process 溝通通信。</li>
+  <li>避免因為大量的 data I/O 造成的記憶體不足問題，</li>
+</ol>
+
+<h1 id="section-7">如何確保不會讀到其他位址</h1>
+
+<p>MMAP 是利用自己的虛擬位址空間來處理 (必須先映射，否則無法透過 user-space 的虛擬記憶體存取)。所以其他 user-space 中的行程是沒辦法去存取這塊記憶體。因為其這塊超出的記憶體位址並沒有映射到它自己的虛擬記憶體位址，也因此當 user-space 存取超出的話，就會被作業系統踢出。</p>
+
+<h1 id="section-8">參考資料</h1>
+<ul>
+  <li><a href="https://zh.wikipedia.org/wiki/%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84%E6%96%87%E4%BB%B6">Wiki</a></li>
+  <li><a href="http://www.cnblogs.com/huxiao-tee/p/4660352.html">mmap分析</a></li>
+  <li><a href="http://man7.org/linux/man-pages/man2/mmap.2.html">mmap函數說明</a></li>
+</ul>
+
+
+  </article>
+
+</div>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Frank's blog - Developer, coffee lover and traveler</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col  footer-col-1">
+        <ul class="contact-list">
+          <li>Frank's blog - Developer, coffee lover and traveler</li>
+          <li><a href="mailto:ijamhh@gmail.com">ijamhh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col  footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/wchuang">
+              <span class="icon  icon--github">
+                <svg viewBox="0 0 16 16">
+                  <path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/>
+                </svg>
+              </span>
+
+              <span class="username">wchuang</span>
+            </a>
+          </li>
+          
+
+          
+          <li>
+            <a href="https://twitter.com/huang_wc">
+              <span class="icon  icon--twitter">
+                <svg viewBox="0 0 16 16">
+                  <path fill="#828282" d="M15.969,3.058c-0.586,0.26-1.217,0.436-1.878,0.515c0.675-0.405,1.194-1.045,1.438-1.809
+                  c-0.632,0.375-1.332,0.647-2.076,0.793c-0.596-0.636-1.446-1.033-2.387-1.033c-1.806,0-3.27,1.464-3.27,3.27 c0,0.256,0.029,0.506,0.085,0.745C5.163,5.404,2.753,4.102,1.14,2.124C0.859,2.607,0.698,3.168,0.698,3.767 c0,1.134,0.577,2.135,1.455,2.722C1.616,6.472,1.112,6.325,0.671,6.08c0,0.014,0,0.027,0,0.041c0,1.584,1.127,2.906,2.623,3.206 C3.02,9.402,2.731,9.442,2.433,9.442c-0.211,0-0.416-0.021-0.615-0.059c0.416,1.299,1.624,2.245,3.055,2.271 c-1.119,0.877-2.529,1.4-4.061,1.4c-0.264,0-0.524-0.015-0.78-0.046c1.447,0.928,3.166,1.469,5.013,1.469 c6.015,0,9.304-4.983,9.304-9.304c0-0.142-0.003-0.283-0.009-0.423C14.976,4.29,15.531,3.714,15.969,3.058z"/>
+                </svg>
+              </span>
+
+              <span class="username">huang_wc</span>
+            </a>
+          </li>
+          
+        </ul>
+      </div>
+
+      <div class="footer-col  footer-col-3">
+        <p class="text">My name is Frank, an iOS developer from Taiwan.  Currently, I work and live in Shanghai, China.
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+  </body>
+
+</html>
