@@ -6,8 +6,8 @@
 </description>
     <link>http://blog.wchuang.me/</link>
     <atom:link href="http://blog.wchuang.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Mon, 18 Jun 2018 21:15:53 +0800</pubDate>
-    <lastBuildDate>Mon, 18 Jun 2018 21:15:53 +0800</lastBuildDate>
+    <pubDate>Mon, 18 Jun 2018 21:19:42 +0800</pubDate>
+    <lastBuildDate>Mon, 18 Jun 2018 21:19:42 +0800</lastBuildDate>
     <generator>Jekyll v2.4.0</generator>
     
       <item>
@@ -170,7 +170,7 @@
       </item>
     
       <item>
-        <title>How to Make a Private CocoaPods</title>
+        <title>How to Make a Private CocoaPods?</title>
         <description>&lt;h1 id=&quot;overview&quot;&gt;Overview&lt;/h1&gt;
 
 &lt;p&gt;CocoaPods is a great tool not only for adding open source code to your project, but also for sharing components across projects.&lt;/p&gt;
