@@ -1,0 +1,260 @@
+---
+layout: post
+title: 那些你很少用的 Swift GCD 方法
+date: 2018-11-04T15:03:08+08:00
+comments: true
+categories: "GCD, Swift, iOS"
+keywords: "Swift, GCD, iOS"
+---
+
+[Grand Central Dispatch](https://developer.apple.com/documentation/dispatch) (GCD) 相信每個 iOS 開發者都不陌生，它是蘋果提供用來操作多執行緒的一種底層技術，你可以選擇在串行 (serial) 或並行 (concurrent) 的 queue 中執行同步 (synchronous) 或者非同步 (asynchronous) 的任務，這邊就不多說了，最常看到的方法就是：
+
+```
+DispatchQueue.global().async {
+
+	// 耗時操作
+	
+	DispatchQueue.main.async {
+
+		// UI 更新 
+	}
+}
+```
+
+但除此之外，GCD 還有很多很少被使用但是令人驚豔的方法，這邊會介紹 4 種這類的方法，大家下次可以試著在專案中使用看看，相信會有很大的效果。
+
+# 1. 利用 DispatchWorkItem 取消等待的任務
+
+有些人對於 GCD 有一個 __錯誤認知__：
+
+> 一旦排定了 GCD 任務就沒辦法被取消，只有 Operation 才可以。
+
+實際上在 iOS 8 及 macOS 10.10 之後可以使用 DispatchWorkItem 來做到。
+
+應用場景：
+
+假設我們有一個 search bar 讓使用者進行關鍵字搜尋，當收到關鍵字時會向後端 API 發送搜尋請求。但考量到使用者打字的速度，不可能每次輸入一個字就發出網路請求，這可能會造成不必要的網路流量以及伺服器負擔。所以我們可以偵測當使用者輸入閒置超過 0.25 秒後才發送一個請求。
+
+底下是一個例子，我們可以簡單的用 DispatchWorkItem，不用 Timer 或 Operation 的複雜操作。也可以直接用 closure 閉包注入 GCD 中，不需要 @objc 或是 #selector。
+
+```
+class SearchViewController: UIViewController, UISearchBarDelegate {
+
+	private var pendingRequestWorkItem: DispatchWorkItem?
+	
+	// MARK: - UISearchBarDelegate	
+	func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+		
+		// Cancel the pending work item
+		pendingRequestWorkItem?.cancel()
+		
+		// Build a request in a work item
+		let requestWorkItem = DispatchWorkItem { [weak self] in
+			self?.resultLoader.loadRequests(forQuery: searchText)
+		}
+		
+		// Save it and execute after 250ms
+		pendingRequestWorkItem = requestWorkItem
+		DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(250), 
+		                               execute: requestWorkItem)
+	}
+}
+
+```
+
+# 2. 利用 DispatchGroup 執行一系列的任務
+
+有時候我們希望可以做完一系列的任務 {A, B, C} 後，再做其他的任務 D。{ A, B, C } -> D。例如：在建立 model 之前會有多個 API 的 request，待全部 response 回來後才組成需要的 model。
+
+這時候可以利用 DispatchGroup 來達成同步任務。我們只需要注意 `enter()` 以及 `leave()` 的呼叫是否一致。
+
+DispatchGroup 有另個好處可以開多個 DispatchGroup queue 異步的執行，而每個 queue 裡面的任務又可以同步完成。
+
+下面一個簡單的例子，從不同 datasource 取得資料，全部完成後存入 NoteCollection。
+
+```
+// Create a group to synchronize our tasks.
+let groip = DispatchGroup()
+
+// NoteCollection is a thread-safe collection class for storing notes.
+let collection = NoteCollection()
+
+// The 'enter	()' method increments the group's task count
+group.enter()
+localDataSource.load { notes in 
+	collection.add(notes)
+	// while the 'leave()' method decrements it
+	group.leave()
+}
+
+group.enter()
+iCloudDataSource.load { notes in 
+	collection.add(notes)
+	group.leave()
+}
+
+group.enter()
+backendDataSource.load { notes in 
+	collection.add(notes)
+	group.leave()
+}
+
+// This closure will be called when the group's task count reaches 0
+group.notify(queue: .main) { [weak self] in
+	self?.render(collection)
+}
+
+```
+
+上面的代碼重複的部份有點多，我們可以做一個 Array 的擴展來優化：
+
+```
+extension Array where Element == DataSource {
+
+	func load(completion: @escaping (NoteCollection) -> Void) {
+	
+		let group = DispatchGroup()
+		let collection = NoteCollection()
+		
+		for dataSource in self {
+		
+			group.enter()
+			dataSource.load { notes in
+			
+				collection.add(notes)
+				group.leave()
+			}
+		}
+		
+		group.notify(queue: .main) {
+		
+			completion(collection)
+		}
+	}
+}
+```
+
+基於以上擴展，我們可以這樣呼叫
+
+```
+let dataSources: [DataSource] = [
+	localDataSource,
+	iCouldDataSource,
+	backendDataSource
+]
+
+dataSources.load { [weak self] collection in
+
+	self?.render(collection)
+}
+```
+
+# 3. 利用 DispatchSemaphore 鎖住非同步的任務
+
+雖然 DispatchGroup 提供了同步的方法等待所有任務執行完成，但對於不同 DispatchGroup queue 來說，彼此還是异步的進行。DispatchSemaphore 可以鎖住某個 DispatchGroup queue 的執行，藉以達成同步的效果。
+
+跟 DispatchGroup 一樣，DispatchSemaphore API 也很簡單，也是利用 `signal()` 或 `wait()` 來增加或減少內部計數。在呼叫 `signal()` 前呼叫 `wait()` 會 block 目前的操作一直到 `signal()` 被呼叫。
+
+我們修改上面的例子，並另外建立一個 global queue 來加入 Semaphore 方法，因為呼叫 `wait()` 會 block 當前的 queue。成功返回 NoteCollection，失敗則丟出錯誤。
+
+```
+extension Array where Element == DataSource {
+
+	func load() throws -> NoteCollection {
+	
+		let semaphore = DispatchSemaphore(value: 0)
+		var loadedCollection: NoteCollection?
+		
+		let loadingQueue = DispatchQueue.global()
+		
+		loadingQueue.async {
+		
+			self.load(onQueue: loadingQueue) { collection in
+			
+				loadedCollection = collection
+				
+				// Unblock
+				semaphore.signal()
+			}
+		}
+		
+		// Block and wait
+		semaphore.wait(timeout: .noew() + 5)
+		
+		guare let collection = loadedCollection else {
+		
+			throw NoteLoadingError.timeout
+		}
+	
+		return collection
+	}
+}
+
+```
+
+同步的呼叫方式
+
+```
+let dataSource: [DataSource] = [
+	localDataSource,
+	iCloudDataSource,
+	backendDataSource
+]
+
+do {
+	let collection = try dataSource.load()
+	output(collection)
+} catch {
+	output(error)
+}
+
+```
+
+# 4. 利用 DispatchSource 監聽檔案是否被修改
+
+這個鮮為人知的方法可以讓我們監控檔案是否被修改過，`在線編輯`的功能就可以利用這個方式實作出來。
+
+`DispatchSource` 可以有很多種來源，例如：Timer source, User data, file system or memory pressure event，這裡我們用 file system 示範。直接看 code 吧。
+
+```
+class FileObserver {
+
+	private let file: File
+	private let queue: DispatchQueue
+	private var source: DispatchSourceFileSystemObject?
+	
+	init(file: File) {
+	
+		self.file = file
+		self.queue = DispatchQueue(label: "com.test.fileobserver")
+	}
+	
+	func start(closure: @escaping() -> Void) {
+		
+		let path = (file.path as NSString)
+		let fileSystemRepresentation = path.fileSystemRepresentation
+		
+		let fileDescriptor = open(fileSystemRepresentation, O_EVTONLY)
+		
+		let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fileDescriptor, eventMask: .write, queue: queue)
+		
+		source.setEventHandler(handler: closure)
+		source.resume()
+		
+		self.source = source
+	}
+}
+```
+
+```
+let observer = try FileObserver(file: file)
+
+observer.start {
+	print("File was changed")
+}
+```
+
+總結下來，GCD 還是挺厲害的也埋藏了一些好用的功能，比起利用 NSTimer 或者 Operation 可能會產生的問題小很多，也更安全一些！各位看倌可以多多挖掘 GCD 的應用場景。Happy Coding!
+
+### Reference
+* [A deep dive into Grand Central Dispatch in Swift](https://www.swiftbysundell.com/posts/a-deep-dive-into-grand-central-dispatch-in-swift)

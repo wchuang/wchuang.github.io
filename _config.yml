@@ -1,17 +1,21 @@
 # Site settings
 title: Frank's blog - Developer, coffee lover and traveler
 email: ijamhh@gmail.com
+
 description: > # this means to ignore newlines until "baseurl:"
-  My name is Frank, an iOS developer from Taiwan. 
+  My name is Frank, an iOS developer from Taiwan.
   Currently, I work and live in Shanghai, China.
+
 baseurl: "" # the subpath of your site, e.g. /blog/
 url: "http://blog.wchuang.me" # the base hostname & protocol for your site
+
 twitter_username: huang_wc
-github_username:  wchuang
+github_username: wchuang
 linkedin_username: franklol
 
 # Build settings
 markdown: kramdown
+encoding: UTF-8
 
 permalink: /:year/:month/:day/:title/
 
