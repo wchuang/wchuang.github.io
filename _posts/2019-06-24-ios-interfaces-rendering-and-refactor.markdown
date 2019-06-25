@@ -19,7 +19,7 @@ keywords: "iOS, ui rendering, off-screen, on-screen, framebuffer"
 
 圖片如何從最一開始拿到的 raw data，最後展現在螢幕上讓使用者看到？所謂的 raw data 可能會從網路或者 bundle 的一張圖片取得，然後經由 CPU 計算解碼，GPU 渲染至緩存區，最後與硬體同步顯示在螢幕上。概觀圖如下：
 
-![V-sync](https://github.com/wchuang/wchuang.github.io/blob/master/images/vsync/vsync.001.jpeg)
+![V-sync](https://blog.wchuang.cc/images/vsync/vsync.001.jpeg)
 
 傳統 CRT 顯示器在顯示影像會由上到下垂直掃描，掃描完成後就會呈現一個 Frame 的完整畫面，同時電子槍會回到初始位置繼續下一次的掃描。為了讓系統 Controller 知道什麼時候掃描完成並要開始下一次掃描，顯示器會發出定時信號。
 
@@ -51,7 +51,7 @@ that can be displayed on a computer monitor.
 
 但是如果 GPU 每次渲染完第二個 Frame 後就讓 Controller 讀取第二個 buffer 的資料，有可能因為 Controller 還未讀取完第一個 Frame 的資料就切換到第二個，造成了畫面畫面撕裂現象。畫面的上半部顯示舊的影像，下半部顯示了新的影像。
 
-![Screen_tearing](https://github.com/wchuang/wchuang.github.io/blob/master/images/vsync/screen_tearing.jpg)
+![Screen_tearing](https://blog.wchuang.cc/images/vsync/screen_tearing.jpg)
 
 那麼要如何解決這個問題？
 
@@ -133,7 +133,7 @@ GPU 也有 V-Sync 的同步機制，當 V-Sync 開啟時，GPU 會等待顯示�
 
 	觀察調用棧會發現在設定自定義屬性 `name` 的時候，底層做了很多事情，包含了添加屬性方法、尋找屬性方法、設定屬性內容、發送 KVO 通知、`CA::Layer::begin_change()`、`CA::Layer::end_change()`、`CA::Transaction::ensure_compact()`、加鎖等的操作。
 
-	![Custom_layer](https://github.com/wchuang/wchuang.github.io/blob/master/images/vsync/custom_layer.png)
+	![Custom_layer](https://blog.wchuang.cc/images/vsync/custom_layer.png)
 
 3. 對象銷毀
 
@@ -190,17 +190,20 @@ GPU 也有 V-Sync 的同步機制，當 V-Sync 開啟時，GPU 會等待顯示�
 
 3. 圖形生成
 
-	CALayer 的 border、圓角、陰影、遮罩、CASharpLayer 的矢量圖形顯示，通常會造成離屏渲染（Off-Screen Rendering）。
+	CALayer 的 border、圓角、陰影、遮罩、CASharpLayer 的矢量圖形顯示，通常會造成離屏渲染（Off-Screen Rendering)。
 	
 	GPU 的屏幕渲染分為兩種：
 
 	1. On-Screen Rendering：指的是 GPU 的渲染操作在當前用於顯示的緩存區中。
 	2. Off-Screen Rendering：指的是 GPU 的渲染操作不在當前用於顯示的緩存區中，而是另外建立一個緩存區做渲染操作。如果我們__重寫了 drawRect: 方法，並使用了 Core Graphics 方法進行繪製得到 Bitmap 後在交給 GPU 顯示__，也算是一種離屏渲染，因為是由 CPU 渲染。
 
+	
+
 	而離屏渲染（Off-Screen Rendering）的代價是很高的，原因在於：
 
 	1. __創建新的緩存區__：系統必須多花費資源重新創建。
 	2. __上下文切換__：必須先由 On-Screen 切換到 Off-Screen 環境，待 Off-Screen Rendering 結束後，把渲染結果同步到 On-Screen 環境。
+
 
 	我們要避免離屏渲染造成系統無謂的資源浪費，可以設置 `CALayer.shouldRasterize` 屬性為 YES，使得在離屏渲染發生的時候會將渲染後的內容緩存起來，在下一個 Frame 渲染時可以直接復用。但如果你又同時設置了 border、圓角 等其他屬性，緩存將不會起作用。
 	
