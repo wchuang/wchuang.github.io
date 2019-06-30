@@ -73,14 +73,14 @@ GPU 也有 V-Sync 的同步機制，當 V-Sync 開啟時，GPU 會等待顯示�
 
 1. 對象創建
 
-	對象的創建會涉及到內存的分配、屬性調整、計算 retain count 等的操作，相對來說較耗用 CPU 資源。所以可以盡量利用比較__輕量的對象來取代__。如：用 struct 取代 class 來定義 model，或者當不需要響應使用者觸摸事件的控件，可以使用 CALayer 來代替 UIView。__多復用已創建的對象__，可以建立緩存存放。
+	對象的創建會涉及到內存的分配、屬性調整、計算 retain count 等的操作，相對來說較耗用 CPU 資源。所以可以盡量利用比較**輕量的對象來取代**。如：用 struct 取代 class 來定義 model，或者當不需要響應使用者觸摸事件的控件，可以使用 CALayer 來代替 UIView。**多復用已創建的對象**，可以建立緩存存放。
 
 
 2. 對象調整
 
 	對象的屬性調整也是很消耗 CPU 的地方。由於 UIView 關於顯示相關的屬性，如 frame/bounds/transform 等實際上也是映射到 CALayer 屬性，所以修改 UIView 的這些屬性的時候，實際上消耗的性能遠大於其他的屬性。而當 UIView 進行層級調整的時候，UIView 及 CALayer 之間也會出現多次方法調用以及通知。
 
-	我這邊對 CALayer 做了擴展並加了自定義屬性來測試，發現 __CALayer 會在 runtime 時自己添加上屬性方法__。若是對 UIView 做擴展及自定義屬性的話，在調用時會出現找不到方法造成 crash，你需要自己在 runtime 添加屬性方法。
+	我這邊對 CALayer 做了擴展並加了自定義屬性來測試，發現 **CALayer 會在 runtime 時自己添加上屬性方法**。若是對 UIView 做擴展及自定義屬性的話，在調用時會出現找不到方法造成 crash，你需要自己在 runtime 添加屬性方法。
 
 	```
 	// MyLayer
@@ -141,7 +141,7 @@ GPU 也有 V-Sync 的同步機制，當 V-Sync 開啟時，GPU 會等待顯示�
 	
 4. 佈局計算
 
-	佈局計算是最常見消耗系統資源的地方。如果能先在 background thread 計算好並作緩存就能避免這些問題。但上述也提到，調整佈局相關屬性(frame/bounds/center)其實都會對應到 CALayer 層級操作，還有同步通知問題，是非常消耗性能的地方。所以最好__先做預先計算及緩存，並且一次性的調整，而不要多次、頻繁的改變這些屬性__。
+	佈局計算是最常見消耗系統資源的地方。如果能先在 background thread 計算好並作緩存就能避免這些問題。但上述也提到，調整佈局相關屬性(frame/bounds/center)其實都會對應到 CALayer 層級操作，還有同步通知問題，是非常消耗性能的地方。所以最好**先做預先計算及緩存，並且一次性的調整，而不要多次、頻繁的改變這些屬性**。
 
 5. 文本計算
 
@@ -151,11 +151,11 @@ GPU 也有 V-Sync 的同步機制，當 V-Sync 開啟時，GPU 會等待顯示�
 
 	螢幕上能看到的所有文本內容控件，包含 UIWebView，其底層都是通過 `CoreText` 來排版並繪製成 `Bitmap` 顯示。常見的控件（UILabel、UITextView）等，其排版以及繪製都是在主線程進行。所以當有大量的文本需要顯示的時候，CPU 的壓力就會非常大。
 	
-	對此解決方式可以__自定義一個文本控件，並用`TextKit`或`CoreText`對文本異步繪製__。`CoreText` 對象創建好後，能直接取得文本的寬度高度等訊息。__避免了多次計算（調整 UILabel 大小的時候計算一次、UILabel 繪製的時候內部又再算一次）__。且`CoreText`對象佔用內存較少，可以緩存下來做多次復用。
+	對此解決方式可以__自定義一個文本控件，並用`TextKit`或`CoreText`對文本異步繪製__。`CoreText` 對象創建好後，能直接取得文本的寬度高度等訊息。**避免了多次計算（調整 UILabel 大小的時候計算一次、UILabel 繪製的時候內部又再算一次）**。且`CoreText`對象佔用內存較少，可以緩存下來做多次復用。
 
 7. 圖片解碼
 
-	當你用 UIImage 或 CGImageSource 的那幾個方法創建圖片的時候，圖片資料並不會馬上被解碼。當圖片設置到 UIImageView 或 CALayer.contents 時，並且 CALayer 被提交到 GPU 渲染前，CGImage 中的資料才得以解碼。由於這一步是 UI 操作，會發生在主線程，且不可避免。優化方式可以先在 __background thread 把圖片繪製到 CGBitmapContext 中，然後由 Bitmap 直接創建圖片__。
+	當你用 UIImage 或 CGImageSource 的那幾個方法創建圖片的時候，圖片資料並不會馬上被解碼。當圖片設置到 UIImageView 或 CALayer.contents 時，並且 CALayer 被提交到 GPU 渲染前，CGImage 中的資料才得以解碼。由於這一步是 UI 操作，會發生在主線程，且不可避免。優化方式可以先在 **background thread 把圖片繪製到 CGBitmapContext 中，然後由 Bitmap 直接創建圖片**。
 
 8. 圖像繪製
 
@@ -180,13 +180,13 @@ GPU 也有 V-Sync 的同步機制，當 V-Sync 開啟時，GPU 會等待顯示�
 
 	所有的 Bitmap，不論是圖片或是文本的內容，最終都是要由內存提交到顯示卡記憶體，並綁定為 GPU 的 Texture。所以不管是提交的過程或是 GPU 調整和渲染 Texture 的過程，都要消耗不少 GPU 的資源。
 	
-	當在較短時間內顯示大量的圖片時（如 UITableView 存在很多圖片並快速滑動的時候），CPU 佔用率很低，GPU 佔用率非常高，此時介面依然會掉幀。避免此情況的方法只能__避免在短時間內的大量圖片顯示，盡可能將多張圖片合併成一張顯示__。
+	當在較短時間內顯示大量的圖片時（如 UITableView 存在很多圖片並快速滑動的時候），CPU 佔用率很低，GPU 佔用率非常高，此時介面依然會掉幀。避免此情況的方法只能**避免在短時間內的大量圖片顯示，盡可能將多張圖片合併成一張顯示**。
 	
 	當圖片過大，超過 GPU 的最大 Texture size 時，圖片需要先由 CPU 進行預處理，這對 CPU 及 GPU 都會帶來額外的資源消耗。可以從這個網站查看各個 iPhone 機型對應的 [MAX Texture size](http://iosres.com/)。
 
 2. 視圖混合
 
-	當多個 View（CALayer）重疊在一起的時候，GPU 會先把它們混合到一起。如果視圖結構過於複雜，混合的過程也會消耗很多 GPU 資源。為了減少這種情況的資源消耗，可以盡量__減少 view 的層級以及數量，並設置 opaque 為不透明，減少計算 background color 時的 alpha 合成__。也可以將多張視圖預先渲染為一張圖片顯示。
+	當多個 View（CALayer）重疊在一起的時候，GPU 會先把它們混合到一起。如果視圖結構過於複雜，混合的過程也會消耗很多 GPU 資源。為了減少這種情況的資源消耗，可以盡量**減少 view 的層級以及數量，並設置 opaque 為不透明，減少計算 background color 時的 alpha 合成**。也可以將多張視圖預先渲染為一張圖片顯示。
 
 3. 圖形生成
 
@@ -195,14 +195,14 @@ GPU 也有 V-Sync 的同步機制，當 V-Sync 開啟時，GPU 會等待顯示�
 	GPU 的屏幕渲染分為兩種：
 
 	1. On-Screen Rendering：指的是 GPU 的渲染操作在當前用於顯示的緩存區中。
-	2. Off-Screen Rendering：指的是 GPU 的渲染操作不在當前用於顯示的緩存區中，而是另外建立一個緩存區做渲染操作。如果我們__重寫了 drawRect: 方法，並使用了 Core Graphics 方法進行繪製得到 Bitmap 後在交給 GPU 顯示__，也算是一種離屏渲染，因為是由 CPU 渲染。
+	2. Off-Screen Rendering：指的是 GPU 的渲染操作不在當前用於顯示的緩存區中，而是另外建立一個緩存區做渲染操作。如果我們**重寫了 drawRect: 方法，並使用了 Core Graphics 方法進行繪製得到 Bitmap 後在交給 GPU 顯示**，也算是一種離屏渲染，因為是由 CPU 渲染。
 
 	
 
 	而離屏渲染（Off-Screen Rendering）的代價是很高的，原因在於：
 
-	1. __創建新的緩存區__：系統必須多花費資源重新創建。
-	2. __上下文切換__：必須先由 On-Screen 切換到 Off-Screen 環境，待 Off-Screen Rendering 結束後，把渲染結果同步到 On-Screen 環境。
+	1. **創建新的緩存區**：系統必須多花費資源重新創建。
+	2. **上下文切換**：必須先由 On-Screen 切換到 Off-Screen 環境，待 Off-Screen Rendering 結束後，把渲染結果同步到 On-Screen 環境。
 
 
 	我們要避免離屏渲染造成系統無謂的資源浪費，可以設置 `CALayer.shouldRasterize` 屬性為 YES，使得在離屏渲染發生的時候會將渲染後的內容緩存起來，在下一個 Frame 渲染時可以直接復用。但如果你又同時設置了 border、圓角 等其他屬性，緩存將不會起作用。
