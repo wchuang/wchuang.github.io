@@ -4,7 +4,7 @@ email: ijamhh@gmail.com
 
 description: > # this means to ignore newlines until "baseurl:"
   My name is Frank, an iOS developer from Taiwan.
-  Currently, I work and live in Beijing, China.
+  Currently, I work at Didi Chuxing(DiDi) and live in Beijing, China.
 
 baseurl: "" # the subpath of your site, e.g. /blog/
 url: "http://blog.wchuang.me" # the base hostname & protocol for your site
