@@ -6,8 +6,8 @@
 </description>
     <link>http://blog.wchuang.me/</link>
     <atom:link href="http://blog.wchuang.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 21 Sep 2019 19:17:46 +0800</pubDate>
-    <lastBuildDate>Sat, 21 Sep 2019 19:17:46 +0800</lastBuildDate>
+    <pubDate>Sat, 21 Sep 2019 19:57:56 +0800</pubDate>
+    <lastBuildDate>Sat, 21 Sep 2019 19:57:56 +0800</lastBuildDate>
     <generator>Jekyll v2.4.0</generator>
     
       <item>
@@ -151,26 +151,6 @@
         <category>thread,</category>
         
         <category>safe</category>
-        
-      </item>
-    
-      <item>
-        <title>自己打造 Autorelease Pool</title>
-        <description>&lt;h2 id=&quot;overview&quot;&gt;Overview&lt;/h2&gt;
-
-&lt;p&gt;當你對某個 NSObject 的實例呼叫 &lt;code&gt;autorelease&lt;/code&gt; 方法，相當於呼叫了 &lt;code&gt;[NSAutoreleasePool addObject:self]&lt;/code&gt; 的類方法，這個方法會把這個 object 加入 autorelease pool 裡。&lt;/p&gt;
-
-</description>
-        <pubDate>Thu, 27 Jun 2019 17:26:00 +0800</pubDate>
-        <link>http://blog.wchuang.me/2019/06/27/make-ios-autorelease-pool/</link>
-        <guid isPermaLink="true">http://blog.wchuang.me/2019/06/27/make-ios-autorelease-pool/</guid>
-        
-        
-        <category>ios,</category>
-        
-        <category>autorelease,</category>
-        
-        <category>pool</category>
         
       </item>
     
@@ -1168,6 +1148,129 @@ git push --tags
         <category>adhoc</category>
         
         <category>distribute</category>
+        
+      </item>
+    
+      <item>
+        <title>[UIView viewWithTag:]</title>
+        <description>&lt;p&gt;這篇關於使用 [UIView viewWithTag:] 的文章，雖然已是兩年前的，但在下認為文章內所提及的觀念與用法還是很值得與大家分享。&lt;/p&gt;
+
+&lt;p&gt;UIView 有個 tag 屬性以及相對應的方法 -viewWithTag:，讓我們可以輕易的存取特定的 view，而不需要額外的 reference。&lt;/p&gt;
+
+&lt;p&gt;這邊作者分享了幾個使用上常見的問題：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;不要使用 tags 來儲存資料，例如：陣列存取物件的索引 (index)…，因為這是一件容易造成後續維護者難以理解你的 code 的一件事…底下是一個使用 button 來呈現圖片縮圖的例子，為了記得哪個按鈕被按到以及要呈現哪個對應於 array 中的圖片索引，所以利用 tag 來記錄。~~(但其實還滿容易這麼幹的啊…在下也常這麼做，要好好檢討了orz)~~&lt;/p&gt;
+
+    &lt;pre&gt;&lt;code&gt;  - (void)configureThumbnailButton:(UIButton *)thumbnailButton 
+                          forPhoto:(NSUInteger)photoIndex {
+  		// ...
+  	thumbnailButton.tag = 1 + photoIndex;
+  		// ...
+  }
+
+  - (void)thumbnailButtonTapped:(id)sender {
+  		UIButton *thumbnailButton = sender;
+  		NSUInteger photoIndex = thumbnailButton.tag - 1;
+  		id selectedPhoto = [self.photoArray objectAtIndex:photoIndex];
+  		[self showPhoto:selectedPhoto];
+  }
+&lt;/code&gt;&lt;/pre&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;存取 view 額外資料的幾個比較正確的方式：&lt;/p&gt;
+
+    &lt;p&gt;我們來探討一下為什麼會寫出上述例子的程式碼，其實也只是想要知道 button 對應的 index，或是 button 真正對應的圖片縮圖，此時更適合的方式應該是另外做一個 custom subClass 來儲存這些有用的額外資料，延續上述例子，應該可以這麼做：&lt;/p&gt;
+
+    &lt;pre&gt;&lt;code&gt;  @interface PhotoThumbnailButton : UIButton
+
+  @property (nonatomic, assign) NSInteger photoIndex;
+  // OR
+  @property (nonatomic, strong) Photo *photo;
+
+  @end
+&lt;/code&gt;&lt;/pre&gt;
+
+    &lt;p&gt;這時候你會說，如果每次都要這樣也太麻煩了吧！的確，每次都要建個 subClass 有時可能不符合實際情況，底下也提供一個用法：Associated references。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;a href=&quot;http://goo.gl/6fM6Kq&quot;&gt;Associated references&lt;/a&gt;：提供了 objc_getAssociatedObject 以及 objc_setAssociatedObject 等方法，可以利用特定的 key 及 policy 存取特定的 obejct。如：&lt;/p&gt;
+
+    &lt;pre&gt;&lt;code&gt;  #import &amp;lt;objc/runtime.h&amp;gt;
+
+  static char kThumbnailButtonAssociatedPhotoKey;
+
+  // ...
+
+  - (void)setAssociatedPhoto:(Photo *)associatedPhoto
+          forThumbnailButton:(UIButton *)thumbnailButton {
+  		objc_setAssociatedObject(thumbnailButton,
+  		                         &amp;amp;kThumbnailButtonAssociatedPhotoKey,
+                               associatedPhoto,
+                               OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+  }
+
+  - (Photo *)associatedPhotoForThumbnailButton:(UIButton *)thumbnailButton {
+      return objc_getAssociatedObject(thumbnailButton,
+                              		 &amp;amp;kThumbnailButtonAssociatedPhotoKey);
+  }
+&lt;/code&gt;&lt;/pre&gt;
+
+    &lt;p&gt;存取時，&lt;/p&gt;
+
+    &lt;pre&gt;&lt;code&gt;	- (void)configureThumbnailButtonForPhoto:(Photo *)photo {
+  		// ...
+  		[self setAssociatedPhoto:photo forThumbnailButton:thumbnailButton];
+  		// ...
+  }
+
+  - (void)thumbnailButtonTapped {
+  		Photo *photo = [self associatedPhotoForThumbnailButton:thumbnailButton];
+  		// ...
+  }
+&lt;/code&gt;&lt;/pre&gt;
+
+    &lt;p&gt;真的是很酷啊… 可是，如果只是想要快速直接的知道是哪一個 view，這樣的方式還是不夠直覺…所以，有些情況下，你還是會想直接利用 UIView’s tag 存取，但重點是請遵循 UIView’s tag 是 UIView 的唯一識別、可讀性以及易維護性的觀念，而使用 #define 或 enum value 來設定 tags，在你之後的開發者會很感謝你的..XD，例如：&lt;/p&gt;
+
+    &lt;pre&gt;&lt;code&gt;  enum MyViewTags {
+      kTitleLabelTag = 1,
+  		kSendButtonTag,
+  		kSomeOtherViewTag
+  };
+
+  // ...
+
+  if (sender.tag == kSendButtonTag) {
+  		// ...
+  }
+&lt;/code&gt;&lt;/pre&gt;
+  &lt;/li&gt;
+  &lt;li&gt;結論：
+    &lt;ul&gt;
+      &lt;li&gt;不要使用 tags 來儲存資料 -&amp;gt; use sub-class or associated references resolving this.&lt;/li&gt;
+      &lt;li&gt;多利用 public properties of sub-class for getting references of subviews.&lt;/li&gt;
+      &lt;li&gt;If you do use tags, do not use magic numbers. Use named constants.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://goo.gl/0xHqWt&quot;&gt;Ref.&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+</description>
+        <pubDate>Tue, 11 Nov 2014 01:46:01 +0800</pubDate>
+        <link>http://blog.wchuang.me/2014/11/11/uiview-viewwithtag/</link>
+        <guid isPermaLink="true">http://blog.wchuang.me/2014/11/11/uiview-viewwithtag/</guid>
+        
+        
+        <category>viewwithtag</category>
+        
+        <category>uiview</category>
+        
+        <category>objective-c</category>
+        
+        <category>ios</category>
+        
+        <category>uikit</category>
         
       </item>
     
