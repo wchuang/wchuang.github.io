@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width initial-scale=1" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <title>About</title>
+    <title>自己打造 Autorelease Pool</title>
     <meta name="description" content="My name is Frank, an iOS developer from Taiwan. Currently, I work and live in Beiling, China.
 ">
 
     <link rel="stylesheet" href="/css/main.css">
-    <link rel="canonical" href="http://blog.wchuang.me/about/">
+    <link rel="canonical" href="http://blog.wchuang.me/2019/06/27/make-ios-autorelease-pool/">
 </head>
 
   <body>
@@ -55,18 +55,15 @@
         <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">About</h1>
+    <h1 class="post-title">自己打造 Autorelease Pool</h1>
+    <p class="post-meta">Jun 27, 2019</p>
   </header>
 
   <article class="post-content">
-    <p>Hi, my name is Frank, an iOS developer from Taiwan. 
-Currently, I work at <a href="https://www.didiglobal.com/">Didi Chuxing(DiDi)</a> and live in Beiling, China. 
-I have 7+ years iOS and few backend development experience, 
-I love and focus on Objective-C, Swift, Node.js and Golang.
-You can find me on 
-<a href="https://www.linkedin.com/in/franklol/">LinkedIn</a>
-or
-<a href="https://twitter.com/huang_wc">Twitter</a>.</p>
+    <h2 id="overview">Overview</h2>
+
+<p>當你對某個 NSObject 的實例呼叫 <code>autorelease</code> 方法，相當於呼叫了 <code>[NSAutoreleasePool addObject:self]</code> 的類方法，這個方法會把這個 object 加入 autorelease pool 裡。</p>
+
 
   </article>
 

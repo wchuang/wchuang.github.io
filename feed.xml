@@ -2,13 +2,177 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Frank&#39;s blog - Developer, coffee lover and traveler</title>
-    <description>My name is Frank, an iOS developer from Taiwan. Currently, I work and live in Shanghai, China.
+    <description>My name is Frank, an iOS developer from Taiwan. Currently, I work and live in Beiling, China.
 </description>
     <link>http://blog.wchuang.me/</link>
     <atom:link href="http://blog.wchuang.me/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Tue, 25 Jun 2019 19:38:53 +0800</pubDate>
-    <lastBuildDate>Tue, 25 Jun 2019 19:38:53 +0800</lastBuildDate>
+    <pubDate>Sat, 21 Sep 2019 19:04:47 +0800</pubDate>
+    <lastBuildDate>Sat, 21 Sep 2019 19:04:47 +0800</lastBuildDate>
     <generator>Jekyll v2.4.0</generator>
+    
+      <item>
+        <title>Atomic 原理與線程安全</title>
+        <description>&lt;h2 id=&quot;section&quot;&gt;寫在前面&lt;/h2&gt;
+
+&lt;p&gt;這篇僅研究 iOS 中 &lt;code&gt;atomic&lt;/code&gt; 屬性底層源碼實現與線程安全的關係。至於 atomic 的介紹以及與 nonatomic 的比較就不在這邊展開了。&lt;/p&gt;
+
+&lt;h2 id=&quot;atomic-&quot;&gt;Atomic 能保證線程安全嗎？&lt;/h2&gt;
+
+&lt;p&gt;首先，我們看下線程安全在 Wiki 的定義：&lt;/p&gt;
+
+&lt;figure class=&quot;code-highlight-figure&quot;&gt;&lt;div class=&quot;code-highlight&quot;&gt;&lt;pre class=&quot;code-highlight-pre&quot;&gt;&lt;div data-line=&quot;1&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;執行緒安全是編程中的術語，指某個函數、函數庫在多執行緒環境中被調用時，
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;2&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;能夠正確地處理多個執行緒之間的共享變量，使程序功能正確完成。 &lt;/div&gt;&lt;/div&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/figure&gt;
+
+&lt;p&gt;也就是說，在你的程序中，若含有多個執行緒同時的執行某一段任務，在 A 執行緒執行完成後的結果不應該被 B 執行緒的結果所影響。這就可以被稱作是線程安全的，即能夠&lt;strong&gt;保證資料的一致性及完整性&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;p&gt;在回答這個問題之前，我們先理解一下 atomic 在底層是怎麼實現的。&lt;/p&gt;
+
+&lt;h2 id=&quot;atomic--1&quot;&gt;Atomic 源碼實現&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Set value&lt;/strong&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;code-highlight-figure&quot;&gt;&lt;div class=&quot;code-highlight&quot;&gt;&lt;pre class=&quot;code-highlight-pre&quot;&gt;&lt;div data-line=&quot;1&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;if (!atomic) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;2&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    oldValue = *slot;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;3&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    *slot = newValue;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;4&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;&amp;#x7d; else &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;5&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    spinlock_t&amp;amp; slotlock = PropertyLocks[slot];
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;6&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    slotlock.lock();
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;7&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    oldValue = *slot;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;8&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    *slot = newValue;        
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;9&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    slotlock.unlock();
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;10&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;&amp;#x7d;&lt;/div&gt;&lt;/div&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;Get value&lt;/strong&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;code-highlight-figure&quot;&gt;&lt;div class=&quot;code-highlight&quot;&gt;&lt;pre class=&quot;code-highlight-pre&quot;&gt;&lt;div data-line=&quot;1&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;spinlock_t&amp;amp; slotlock = PropertyLocks[slot];
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;2&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;slotlock.lock();
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;3&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;id value = objc_retain(*slot);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;4&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;slotlock.unlock();&lt;/div&gt;&lt;/div&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/figure&gt;
+
+&lt;p&gt;在 Apple 官方開源的 objc4-750 裡面，可以發現在屬性在讀寫的時候，進行了 atomic 的判斷式，如果是 atomic 的屬性，會以該屬性的記憶體位置當作 key 值去底層維護的 mapping 表找出對應的 &lt;code&gt;spinlock&lt;/code&gt;，並且加鎖，待完成任務後才解鎖。&lt;/p&gt;
+
+&lt;p&gt;所以，我們知道了，&lt;strong&gt;atomic 會利用 spinlock 自旋鎖來確保讀寫過程中不被其他的執行緒篡改內容&lt;/strong&gt;，算是線程安全。&lt;/p&gt;
+
+&lt;p&gt;所以我寫了一個例子來測試是否如我們想的那樣呢。&lt;/p&gt;
+
+&lt;figure class=&quot;code-highlight-figure&quot;&gt;&lt;div class=&quot;code-highlight&quot;&gt;&lt;pre class=&quot;code-highlight-pre&quot;&gt;&lt;div data-line=&quot;1&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;dispatch_queue_t concurrent = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;2&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt; &lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;3&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    // Thread A
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;4&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    dispatch_async(concurrent, ^&amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;5&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        // Task A
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;6&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        NSLog(@&quot;Enter Thread A&quot;);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;7&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        for (int count = 0; count &amp;lt; 100; count++) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;8&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            self.atomicStr = @&quot;A&quot;;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;9&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            self.nonAtomicStr = @&quot;A&quot;;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;10&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            if (![@&quot;A&quot; isEqualToString:_atomicStr]) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;11&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                NSLog(@&quot;[Atomic] Task A&#39;s result is not expected. %@&quot;, _atomicStr);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;12&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            &amp;#x7d;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;13&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            if (![@&quot;A&quot; isEqualToString:_nonAtomicStr]) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;14&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                NSLog(@&quot;[NonAtomic] Task A&#39;s result is not expected. %@&quot;, _nonAtomicStr);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;15&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            &amp;#x7d;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;16&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        &amp;#x7d;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;17&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    &amp;#x7d;);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;18&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt; &lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;19&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    // Thread B
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;20&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    dispatch_async(concurrent, ^&amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;21&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        // Task B
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;22&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        NSLog(@&quot;Enter Thread B&quot;);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;23&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        for (int count = 0; count &amp;lt; 100; count++) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;24&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            self.atomicStr = @&quot;B&quot;;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;25&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            self.nonAtomicStr = @&quot;B&quot;;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;26&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            if (![@&quot;B&quot; isEqualToString:_atomicStr]) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;27&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                NSLog(@&quot;[Atomic] Task B&#39;s result is not expected. %@&quot;, _atomicStr);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;28&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            &amp;#x7d;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;29&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            if (![@&quot;B&quot; isEqualToString:_nonAtomicStr]) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;30&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                NSLog(@&quot;[NonAtomic] Task B&#39;s result is not expected. %@&quot;, _nonAtomicStr);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;31&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            &amp;#x7d;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;32&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        &amp;#x7d;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;33&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    &amp;#x7d;);&lt;/div&gt;&lt;/div&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/figure&gt;
+
+&lt;p&gt;這裡我開了兩個線程同時分別修改 &lt;code&gt;atomic&lt;/code&gt; 及 &lt;code&gt;nonatomic&lt;/code&gt; 字串。因為我們已經知道 atomic 在賦值的時候會加鎖，來保證當前線程下的任務不會被其他線程修改。所以，我們預期 Task A 每次賦值後的結果要為 A，Task B 需為 B。&lt;/p&gt;
+
+&lt;figure class=&quot;code-highlight-figure&quot;&gt;&lt;div class=&quot;code-highlight&quot;&gt;&lt;pre class=&quot;code-highlight-pre&quot;&gt;&lt;div data-line=&quot;1&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;Atomic[43745:2218609] Enter Thread A
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;2&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;Atomic[43745:2218674] Enter Thread B
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;3&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;Atomic[43745:2218609] [Atomic] Task A&#39;s result is not expected. B
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;4&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;Atomic[43745:2218674] [NonAtomic] Task B&#39;s result is not expected. A
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;5&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;Atomic[43745:2218674] Enter Thread A
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;6&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;Atomic[43745:2218609] Enter Thread B
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;7&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;Atomic[43745:2218674] [Atomic] Task A&#39;s result is not expected. B
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;8&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;Atomic[43745:2218674] [NonAtomic] Task A&#39;s result is not expected. B&lt;/div&gt;&lt;/div&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/figure&gt;
+
+&lt;p&gt;但卻出現這樣的結果。&lt;strong&gt;A 與 B 任務還是會互相影響。宣告 atomic 與 nonatomic 結果是一樣的&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;p&gt;所以 atomic 不是線程安全嗎？&lt;/p&gt;
+
+&lt;p&gt;這邊我的理解是，atomic 是安全的，但是它的職責只在於&lt;strong&gt;保證多執行緒下對同個屬性的讀寫不會同時進行&lt;/strong&gt;。所以當 A 開始寫入，B 的寫入會進入等待，等到 A 一寫完鎖釋放後，B 馬上又鎖上進行寫的操作。這時候 A 的讀取又會進入等待，等到 B 寫完鎖釋放了之後，這時候在 Task A 裡面就會讀取到 B 的內容。反之，如果 A 的讀取快於 B 的寫入，那麼，A 讀取到的內容就會是預期的 A。至於&lt;strong&gt;執行緒的執行順序得看系統的調度了&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;如何實現完整的線程安全？&lt;/h2&gt;
+
+&lt;p&gt;其實就是確保單一任務或接口方法的原子性，讓某一執行緒在執行某段任務或某個方法的時候是唯一的。
+上述例子為了方便測試我加上了 &lt;code&gt;@synchronized&lt;/code&gt; 鎖。這樣就是預期的結果了。&lt;/p&gt;
+
+&lt;p&gt;如下：&lt;/p&gt;
+
+&lt;figure class=&quot;code-highlight-figure&quot;&gt;&lt;div class=&quot;code-highlight&quot;&gt;&lt;pre class=&quot;code-highlight-pre&quot;&gt;&lt;div data-line=&quot;1&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;// Thread A
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;2&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    dispatch_async(concurrent, ^&amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;3&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        // Task A
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;4&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        NSLog(@&quot;Enter Thread A&quot;);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;5&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        @synchronized (self) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;6&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            for (int count = 0; count &amp;lt; 100; count++) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;7&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                self.atomicStr = @&quot;A&quot;;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;8&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                self.nonAtomicStr = @&quot;A&quot;;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;9&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                if (![@&quot;A&quot; isEqualToString:_atomicStr]) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;10&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                    NSLog(@&quot;[Atomic] Task A&#39;s result is not expected. %@&quot;, _atomicStr);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;11&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                &amp;#x7d;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;12&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                if (![@&quot;A&quot; isEqualToString:_nonAtomicStr]) &amp;#x7b;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;13&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                    NSLog(@&quot;[NonAtomic] Task A&#39;s result is not expected. %@&quot;, _nonAtomicStr);
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;14&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;                &amp;#x7d;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;15&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;            &amp;#x7d;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;16&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;        &amp;#x7d;
+&lt;/div&gt;&lt;/div&gt;&lt;div data-line=&quot;17&quot; class=&quot;code-highlight-row numbered&quot;&gt;&lt;div class=&quot;code-highlight-line&quot;&gt;    &amp;#x7d;);&lt;/div&gt;&lt;/div&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/figure&gt;
+
+&lt;p&gt;完整範例請看 -&amp;gt; &lt;a href=&quot;https://github.com/wchuang/devSwift/tree/master/Atomic&quot;&gt;AtomicTest&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;結論&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Atomic 是安全的，它保證了多執行緒下，讀和寫同時間的操作只能有一個，也就是資料的唯一性&lt;/strong&gt;。只是它無法確保是哪個線程先執行，才造成了最後的結果不一致。所以，還需要對每個線程裡的任務做鎖的保護，確保最後的結果是預期完整的。&lt;/p&gt;
+
+&lt;p&gt;Enjoy!&lt;/p&gt;
+</description>
+        <pubDate>Thu, 04 Jul 2019 18:50:03 +0800</pubDate>
+        <link>http://blog.wchuang.me/2019/07/04/atomic-thread-safe-or-not/</link>
+        <guid isPermaLink="true">http://blog.wchuang.me/2019/07/04/atomic-thread-safe-or-not/</guid>
+        
+        
+        <category>ios,</category>
+        
+        <category>atomic,</category>
+        
+        <category>property,</category>
+        
+        <category>thread,</category>
+        
+        <category>safe</category>
+        
+      </item>
+    
+      <item>
+        <title>自己打造 Autorelease Pool</title>
+        <description>&lt;h2 id=&quot;overview&quot;&gt;Overview&lt;/h2&gt;
+
+&lt;p&gt;當你對某個 NSObject 的實例呼叫 &lt;code&gt;autorelease&lt;/code&gt; 方法，相當於呼叫了 &lt;code&gt;[NSAutoreleasePool addObject:self]&lt;/code&gt; 的類方法，這個方法會把這個 object 加入 autorelease pool 裡。&lt;/p&gt;
+
+</description>
+        <pubDate>Thu, 27 Jun 2019 17:26:00 +0800</pubDate>
+        <link>http://blog.wchuang.me/2019/06/27/make-ios-autorelease-pool/</link>
+        <guid isPermaLink="true">http://blog.wchuang.me/2019/06/27/make-ios-autorelease-pool/</guid>
+        
+        
+        <category>ios,</category>
+        
+        <category>autorelease,</category>
+        
+        <category>pool</category>
+        
+      </item>
     
       <item>
         <title>iOS 介面渲染及優化</title>
@@ -26,7 +190,7 @@
 
 &lt;p&gt;圖片如何從最一開始拿到的 raw data，最後展現在螢幕上讓使用者看到？所謂的 raw data 可能會從網路或者 bundle 的一張圖片取得，然後經由 CPU 計算解碼，GPU 渲染至緩存區，最後與硬體同步顯示在螢幕上。概觀圖如下：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;../images/vsync/vsync.001.jpeg&quot; alt=&quot;V-sync&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.wchuang.cc/images/vsync/vsync.001.jpeg&quot; alt=&quot;V-sync&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;傳統 CRT 顯示器在顯示影像會由上到下垂直掃描，掃描完成後就會呈現一個 Frame 的完整畫面，同時電子槍會回到初始位置繼續下一次的掃描。為了讓系統 Controller 知道什麼時候掃描完成並要開始下一次掃描，顯示器會發出定時信號。&lt;/p&gt;
 
@@ -54,7 +218,7 @@
 
 &lt;p&gt;但是如果 GPU 每次渲染完第二個 Frame 後就讓 Controller 讀取第二個 buffer 的資料，有可能因為 Controller 還未讀取完第一個 Frame 的資料就切換到第二個，造成了畫面畫面撕裂現象。畫面的上半部顯示舊的影像，下半部顯示了新的影像。&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;../images/vsync/screen_tearing.jpg&quot; alt=&quot;Screen_tearing&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.wchuang.cc/images/vsync/screen_tearing.jpg&quot; alt=&quot;Screen_tearing&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;那麼要如何解決這個問題？&lt;/p&gt;
 
@@ -78,7 +242,7 @@
   &lt;li&gt;
     &lt;p&gt;對象創建&lt;/p&gt;
 
-    &lt;p&gt;對象的創建會涉及到內存的分配、屬性調整、計算 retain count 等的操作，相對來說較耗用 CPU 資源。所以可以盡量利用比較__輕量的對象來取代__。如：用 struct 取代 class 來定義 model，或者當不需要響應使用者觸摸事件的控件，可以使用 CALayer 來代替 UIView。&lt;strong&gt;多復用已創建的對象&lt;/strong&gt;，可以建立緩存存放。&lt;/p&gt;
+    &lt;p&gt;對象的創建會涉及到內存的分配、屬性調整、計算 retain count 等的操作，相對來說較耗用 CPU 資源。所以可以盡量利用比較&lt;strong&gt;輕量的對象來取代&lt;/strong&gt;。如：用 struct 取代 class 來定義 model，或者當不需要響應使用者觸摸事件的控件，可以使用 CALayer 來代替 UIView。&lt;strong&gt;多復用已創建的對象&lt;/strong&gt;，可以建立緩存存放。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;對象調整&lt;/p&gt;
@@ -138,7 +302,7 @@
 
     &lt;p&gt;觀察調用棧會發現在設定自定義屬性 &lt;code&gt;name&lt;/code&gt; 的時候，底層做了很多事情，包含了添加屬性方法、尋找屬性方法、設定屬性內容、發送 KVO 通知、&lt;code&gt;CA::Layer::begin_change()&lt;/code&gt;、&lt;code&gt;CA::Layer::end_change()&lt;/code&gt;、&lt;code&gt;CA::Transaction::ensure_compact()&lt;/code&gt;、加鎖等的操作。&lt;/p&gt;
 
-    &lt;p&gt;&lt;img src=&quot;../images/vsync/custom_layer.png&quot; alt=&quot;Custom_layer&quot; /&gt;&lt;/p&gt;
+    &lt;p&gt;&lt;img src=&quot;https://blog.wchuang.cc/images/vsync/custom_layer.png&quot; alt=&quot;Custom_layer&quot; /&gt;&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;對象銷毀&lt;/p&gt;
@@ -148,7 +312,7 @@
   &lt;li&gt;
     &lt;p&gt;佈局計算&lt;/p&gt;
 
-    &lt;p&gt;佈局計算是最常見消耗系統資源的地方。如果能先在 background thread 計算好並作緩存就能避免這些問題。但上述也提到，調整佈局相關屬性(frame/bounds/center)其實都會對應到 CALayer 層級操作，還有同步通知問題，是非常消耗性能的地方。所以最好__先做預先計算及緩存，並且一次性的調整，而不要多次、頻繁的改變這些屬性__。&lt;/p&gt;
+    &lt;p&gt;佈局計算是最常見消耗系統資源的地方。如果能先在 background thread 計算好並作緩存就能避免這些問題。但上述也提到，調整佈局相關屬性(frame/bounds/center)其實都會對應到 CALayer 層級操作，還有同步通知問題，是非常消耗性能的地方。所以最好&lt;strong&gt;先做預先計算及緩存，並且一次性的調整，而不要多次、頻繁的改變這些屬性&lt;/strong&gt;。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;文本計算&lt;/p&gt;
@@ -160,7 +324,7 @@
 
     &lt;p&gt;螢幕上能看到的所有文本內容控件，包含 UIWebView，其底層都是通過 &lt;code&gt;CoreText&lt;/code&gt; 來排版並繪製成 &lt;code&gt;Bitmap&lt;/code&gt; 顯示。常見的控件（UILabel、UITextView）等，其排版以及繪製都是在主線程進行。所以當有大量的文本需要顯示的時候，CPU 的壓力就會非常大。&lt;/p&gt;
 
-    &lt;p&gt;對此解決方式可以__自定義一個文本控件，並用&lt;code&gt;TextKit&lt;/code&gt;或&lt;code&gt;CoreText&lt;/code&gt;對文本異步繪製__。&lt;code&gt;CoreText&lt;/code&gt; 對象創建好後，能直接取得文本的寬度高度等訊息。&lt;strong&gt;避免了多次計算（調整 UILabel 大小的時候計算一次、UILabel 繪製的時候內部又再算一次）&lt;/strong&gt;。且&lt;code&gt;CoreText&lt;/code&gt;對象佔用內存較少，可以緩存下來做多次復用。&lt;/p&gt;
+    &lt;p&gt;對此解決方式可以&lt;strong&gt;自定義一個文本控件，並用&lt;code&gt;TextKit&lt;/code&gt;或&lt;code&gt;CoreText&lt;/code&gt;對文本異步繪製&lt;/strong&gt;。&lt;code&gt;CoreText&lt;/code&gt; 對象創建好後，能直接取得文本的寬度高度等訊息。&lt;strong&gt;避免了多次計算（調整 UILabel 大小的時候計算一次、UILabel 繪製的時候內部又再算一次）&lt;/strong&gt;。且&lt;code&gt;CoreText&lt;/code&gt;對象佔用內存較少，可以緩存下來做多次復用。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;圖片解碼&lt;/p&gt;
@@ -195,25 +359,25 @@
 
     &lt;p&gt;所有的 Bitmap，不論是圖片或是文本的內容，最終都是要由內存提交到顯示卡記憶體，並綁定為 GPU 的 Texture。所以不管是提交的過程或是 GPU 調整和渲染 Texture 的過程，都要消耗不少 GPU 的資源。&lt;/p&gt;
 
-    &lt;p&gt;當在較短時間內顯示大量的圖片時（如 UITableView 存在很多圖片並快速滑動的時候），CPU 佔用率很低，GPU 佔用率非常高，此時介面依然會掉幀。避免此情況的方法只能__避免在短時間內的大量圖片顯示，盡可能將多張圖片合併成一張顯示__。&lt;/p&gt;
+    &lt;p&gt;當在較短時間內顯示大量的圖片時（如 UITableView 存在很多圖片並快速滑動的時候），CPU 佔用率很低，GPU 佔用率非常高，此時介面依然會掉幀。避免此情況的方法只能&lt;strong&gt;避免在短時間內的大量圖片顯示，盡可能將多張圖片合併成一張顯示&lt;/strong&gt;。&lt;/p&gt;
 
     &lt;p&gt;當圖片過大，超過 GPU 的最大 Texture size 時，圖片需要先由 CPU 進行預處理，這對 CPU 及 GPU 都會帶來額外的資源消耗。可以從這個網站查看各個 iPhone 機型對應的 &lt;a href=&quot;http://iosres.com/&quot;&gt;MAX Texture size&lt;/a&gt;。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;視圖混合&lt;/p&gt;
 
-    &lt;p&gt;當多個 View（CALayer）重疊在一起的時候，GPU 會先把它們混合到一起。如果視圖結構過於複雜，混合的過程也會消耗很多 GPU 資源。為了減少這種情況的資源消耗，可以盡量__減少 view 的層級以及數量，並設置 opaque 為不透明，減少計算 background color 時的 alpha 合成__。也可以將多張視圖預先渲染為一張圖片顯示。&lt;/p&gt;
+    &lt;p&gt;當多個 View（CALayer）重疊在一起的時候，GPU 會先把它們混合到一起。如果視圖結構過於複雜，混合的過程也會消耗很多 GPU 資源。為了減少這種情況的資源消耗，可以盡量&lt;strong&gt;減少 view 的層級以及數量，並設置 opaque 為不透明，減少計算 background color 時的 alpha 合成&lt;/strong&gt;。也可以將多張視圖預先渲染為一張圖片顯示。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;圖形生成&lt;/p&gt;
 
-    &lt;p&gt;CALayer 的 border、圓角、陰影、遮罩、CASharpLayer 的矢量圖形顯示，通常會造成離屏渲染（Off-Screen Rendering）。&lt;/p&gt;
+    &lt;p&gt;CALayer 的 border、圓角、陰影、遮罩、CASharpLayer 的矢量圖形顯示，通常會造成離屏渲染（Off-Screen Rendering)。&lt;/p&gt;
 
     &lt;p&gt;GPU 的屏幕渲染分為兩種：&lt;/p&gt;
 
     &lt;ol&gt;
       &lt;li&gt;On-Screen Rendering：指的是 GPU 的渲染操作在當前用於顯示的緩存區中。&lt;/li&gt;
-      &lt;li&gt;Off-Screen Rendering：指的是 GPU 的渲染操作不在當前用於顯示的緩存區中，而是另外建立一個緩存區做渲染操作。如果我們__重寫了 drawRect: 方法，並使用了 Core Graphics 方法進行繪製得到 Bitmap 後在交給 GPU 顯示__，也算是一種離屏渲染，因為是由 CPU 渲染。&lt;/li&gt;
+      &lt;li&gt;Off-Screen Rendering：指的是 GPU 的渲染操作不在當前用於顯示的緩存區中，而是另外建立一個緩存區做渲染操作。如果我們&lt;strong&gt;重寫了 drawRect: 方法，並使用了 Core Graphics 方法進行繪製得到 Bitmap 後在交給 GPU 顯示&lt;/strong&gt;，也算是一種離屏渲染，因為是由 CPU 渲染。&lt;/li&gt;
     &lt;/ol&gt;
 
     &lt;p&gt;而離屏渲染（Off-Screen Rendering）的代價是很高的，原因在於：&lt;/p&gt;
@@ -223,7 +387,7 @@
       &lt;li&gt;&lt;strong&gt;上下文切換&lt;/strong&gt;：必須先由 On-Screen 切換到 Off-Screen 環境，待 Off-Screen Rendering 結束後，把渲染結果同步到 On-Screen 環境。&lt;/li&gt;
     &lt;/ol&gt;
 
-    &lt;p&gt;所以我們要避免離屏渲染造成系統無謂的資源浪費，可以設置 &lt;code&gt;CALayer.shouldRasterize&lt;/code&gt; 屬性為 YES，使得在離屏渲染發生的時候會將渲染後的內容緩存起來，在下一個 Frame 渲染時可以直接復用。但如果你又同時設置了 border、圓角 等其他屬性，緩存將不會起作用。&lt;/p&gt;
+    &lt;p&gt;我們要避免離屏渲染造成系統無謂的資源浪費，可以設置 &lt;code&gt;CALayer.shouldRasterize&lt;/code&gt; 屬性為 YES，使得在離屏渲染發生的時候會將渲染後的內容緩存起來，在下一個 Frame 渲染時可以直接復用。但如果你又同時設置了 border、圓角 等其他屬性，緩存將不會起作用。&lt;/p&gt;
 
     &lt;p&gt;所以最好的方式，還是要避免上述的圓角、border、mask 等屬性的調用，可以用 CPU 渲染來代替。&lt;/p&gt;
   &lt;/li&gt;
@@ -242,6 +406,18 @@
         <link>http://blog.wchuang.me/2019/06/24/ios-interfaces-rendering-and-refactor/</link>
         <guid isPermaLink="true">http://blog.wchuang.me/2019/06/24/ios-interfaces-rendering-and-refactor/</guid>
         
+        
+        <category>ios,</category>
+        
+        <category>ui</category>
+        
+        <category>rendering,</category>
+        
+        <category>off-screen,</category>
+        
+        <category>on-screen,</category>
+        
+        <category>framebuffer</category>
         
       </item>
     
@@ -992,129 +1168,6 @@ git push --tags
         <category>adhoc</category>
         
         <category>distribute</category>
-        
-      </item>
-    
-      <item>
-        <title>[UIView viewWithTag:]</title>
-        <description>&lt;p&gt;這篇關於使用 [UIView viewWithTag:] 的文章，雖然已是兩年前的，但在下認為文章內所提及的觀念與用法還是很值得與大家分享。&lt;/p&gt;
-
-&lt;p&gt;UIView 有個 tag 屬性以及相對應的方法 -viewWithTag:，讓我們可以輕易的存取特定的 view，而不需要額外的 reference。&lt;/p&gt;
-
-&lt;p&gt;這邊作者分享了幾個使用上常見的問題：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;
-    &lt;p&gt;不要使用 tags 來儲存資料，例如：陣列存取物件的索引 (index)…，因為這是一件容易造成後續維護者難以理解你的 code 的一件事…底下是一個使用 button 來呈現圖片縮圖的例子，為了記得哪個按鈕被按到以及要呈現哪個對應於 array 中的圖片索引，所以利用 tag 來記錄。~~(但其實還滿容易這麼幹的啊…在下也常這麼做，要好好檢討了orz)~~&lt;/p&gt;
-
-    &lt;pre&gt;&lt;code&gt;  - (void)configureThumbnailButton:(UIButton *)thumbnailButton 
-                          forPhoto:(NSUInteger)photoIndex {
-  		// ...
-  	thumbnailButton.tag = 1 + photoIndex;
-  		// ...
-  }
-
-  - (void)thumbnailButtonTapped:(id)sender {
-  		UIButton *thumbnailButton = sender;
-  		NSUInteger photoIndex = thumbnailButton.tag - 1;
-  		id selectedPhoto = [self.photoArray objectAtIndex:photoIndex];
-  		[self showPhoto:selectedPhoto];
-  }
-&lt;/code&gt;&lt;/pre&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;存取 view 額外資料的幾個比較正確的方式：&lt;/p&gt;
-
-    &lt;p&gt;我們來探討一下為什麼會寫出上述例子的程式碼，其實也只是想要知道 button 對應的 index，或是 button 真正對應的圖片縮圖，此時更適合的方式應該是另外做一個 custom subClass 來儲存這些有用的額外資料，延續上述例子，應該可以這麼做：&lt;/p&gt;
-
-    &lt;pre&gt;&lt;code&gt;  @interface PhotoThumbnailButton : UIButton
-
-  @property (nonatomic, assign) NSInteger photoIndex;
-  // OR
-  @property (nonatomic, strong) Photo *photo;
-
-  @end
-&lt;/code&gt;&lt;/pre&gt;
-
-    &lt;p&gt;這時候你會說，如果每次都要這樣也太麻煩了吧！的確，每次都要建個 subClass 有時可能不符合實際情況，底下也提供一個用法：Associated references。&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;&lt;a href=&quot;http://goo.gl/6fM6Kq&quot;&gt;Associated references&lt;/a&gt;：提供了 objc_getAssociatedObject 以及 objc_setAssociatedObject 等方法，可以利用特定的 key 及 policy 存取特定的 obejct。如：&lt;/p&gt;
-
-    &lt;pre&gt;&lt;code&gt;  #import &amp;lt;objc/runtime.h&amp;gt;
-
-  static char kThumbnailButtonAssociatedPhotoKey;
-
-  // ...
-
-  - (void)setAssociatedPhoto:(Photo *)associatedPhoto
-          forThumbnailButton:(UIButton *)thumbnailButton {
-  		objc_setAssociatedObject(thumbnailButton,
-  		                         &amp;amp;kThumbnailButtonAssociatedPhotoKey,
-                               associatedPhoto,
-                               OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-  }
-
-  - (Photo *)associatedPhotoForThumbnailButton:(UIButton *)thumbnailButton {
-      return objc_getAssociatedObject(thumbnailButton,
-                              		 &amp;amp;kThumbnailButtonAssociatedPhotoKey);
-  }
-&lt;/code&gt;&lt;/pre&gt;
-
-    &lt;p&gt;存取時，&lt;/p&gt;
-
-    &lt;pre&gt;&lt;code&gt;	- (void)configureThumbnailButtonForPhoto:(Photo *)photo {
-  		// ...
-  		[self setAssociatedPhoto:photo forThumbnailButton:thumbnailButton];
-  		// ...
-  }
-
-  - (void)thumbnailButtonTapped {
-  		Photo *photo = [self associatedPhotoForThumbnailButton:thumbnailButton];
-  		// ...
-  }
-&lt;/code&gt;&lt;/pre&gt;
-
-    &lt;p&gt;真的是很酷啊… 可是，如果只是想要快速直接的知道是哪一個 view，這樣的方式還是不夠直覺…所以，有些情況下，你還是會想直接利用 UIView’s tag 存取，但重點是請遵循 UIView’s tag 是 UIView 的唯一識別、可讀性以及易維護性的觀念，而使用 #define 或 enum value 來設定 tags，在你之後的開發者會很感謝你的..XD，例如：&lt;/p&gt;
-
-    &lt;pre&gt;&lt;code&gt;  enum MyViewTags {
-      kTitleLabelTag = 1,
-  		kSendButtonTag,
-  		kSomeOtherViewTag
-  };
-
-  // ...
-
-  if (sender.tag == kSendButtonTag) {
-  		// ...
-  }
-&lt;/code&gt;&lt;/pre&gt;
-  &lt;/li&gt;
-  &lt;li&gt;結論：
-    &lt;ul&gt;
-      &lt;li&gt;不要使用 tags 來儲存資料 -&amp;gt; use sub-class or associated references resolving this.&lt;/li&gt;
-      &lt;li&gt;多利用 public properties of sub-class for getting references of subviews.&lt;/li&gt;
-      &lt;li&gt;If you do use tags, do not use magic numbers. Use named constants.&lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;a href=&quot;http://goo.gl/0xHqWt&quot;&gt;Ref.&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-
-</description>
-        <pubDate>Tue, 11 Nov 2014 01:46:01 +0800</pubDate>
-        <link>http://blog.wchuang.me/2014/11/11/uiview-viewwithtag/</link>
-        <guid isPermaLink="true">http://blog.wchuang.me/2014/11/11/uiview-viewwithtag/</guid>
-        
-        
-        <category>viewwithtag</category>
-        
-        <category>uiview</category>
-        
-        <category>objective-c</category>
-        
-        <category>ios</category>
-        
-        <category>uikit</category>
         
       </item>
     

@@ -7,7 +7,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
     <title>iOS 介面渲染及優化</title>
-    <meta name="description" content="My name is Frank, an iOS developer from Taiwan. Currently, I work and live in Shanghai, China.
+    <meta name="description" content="My name is Frank, an iOS developer from Taiwan. Currently, I work and live in Beiling, China.
 ">
 
     <link rel="stylesheet" href="/css/main.css">
@@ -74,7 +74,7 @@
 
 <p>圖片如何從最一開始拿到的 raw data，最後展現在螢幕上讓使用者看到？所謂的 raw data 可能會從網路或者 bundle 的一張圖片取得，然後經由 CPU 計算解碼，GPU 渲染至緩存區，最後與硬體同步顯示在螢幕上。概觀圖如下：</p>
 
-<p><img src="../images/vsync/vsync.001.jpeg" alt="V-sync" /></p>
+<p><img src="https://blog.wchuang.cc/images/vsync/vsync.001.jpeg" alt="V-sync" /></p>
 
 <p>傳統 CRT 顯示器在顯示影像會由上到下垂直掃描，掃描完成後就會呈現一個 Frame 的完整畫面，同時電子槍會回到初始位置繼續下一次的掃描。為了讓系統 Controller 知道什麼時候掃描完成並要開始下一次掃描，顯示器會發出定時信號。</p>
 
@@ -102,7 +102,7 @@
 
 <p>但是如果 GPU 每次渲染完第二個 Frame 後就讓 Controller 讀取第二個 buffer 的資料，有可能因為 Controller 還未讀取完第一個 Frame 的資料就切換到第二個，造成了畫面畫面撕裂現象。畫面的上半部顯示舊的影像，下半部顯示了新的影像。</p>
 
-<p><img src="../images/vsync/screen_tearing.jpg" alt="Screen_tearing" /></p>
+<p><img src="https://blog.wchuang.cc/images/vsync/screen_tearing.jpg" alt="Screen_tearing" /></p>
 
 <p>那麼要如何解決這個問題？</p>
 
@@ -126,7 +126,7 @@
   <li>
     <p>對象創建</p>
 
-    <p>對象的創建會涉及到內存的分配、屬性調整、計算 retain count 等的操作，相對來說較耗用 CPU 資源。所以可以盡量利用比較__輕量的對象來取代__。如：用 struct 取代 class 來定義 model，或者當不需要響應使用者觸摸事件的控件，可以使用 CALayer 來代替 UIView。<strong>多復用已創建的對象</strong>，可以建立緩存存放。</p>
+    <p>對象的創建會涉及到內存的分配、屬性調整、計算 retain count 等的操作，相對來說較耗用 CPU 資源。所以可以盡量利用比較<strong>輕量的對象來取代</strong>。如：用 struct 取代 class 來定義 model，或者當不需要響應使用者觸摸事件的控件，可以使用 CALayer 來代替 UIView。<strong>多復用已創建的對象</strong>，可以建立緩存存放。</p>
   </li>
   <li>
     <p>對象調整</p>
@@ -186,7 +186,7 @@
 
     <p>觀察調用棧會發現在設定自定義屬性 <code>name</code> 的時候，底層做了很多事情，包含了添加屬性方法、尋找屬性方法、設定屬性內容、發送 KVO 通知、<code>CA::Layer::begin_change()</code>、<code>CA::Layer::end_change()</code>、<code>CA::Transaction::ensure_compact()</code>、加鎖等的操作。</p>
 
-    <p><img src="../images/vsync/custom_layer.png" alt="Custom_layer" /></p>
+    <p><img src="https://blog.wchuang.cc/images/vsync/custom_layer.png" alt="Custom_layer" /></p>
   </li>
   <li>
     <p>對象銷毀</p>
@@ -196,7 +196,7 @@
   <li>
     <p>佈局計算</p>
 
-    <p>佈局計算是最常見消耗系統資源的地方。如果能先在 background thread 計算好並作緩存就能避免這些問題。但上述也提到，調整佈局相關屬性(frame/bounds/center)其實都會對應到 CALayer 層級操作，還有同步通知問題，是非常消耗性能的地方。所以最好__先做預先計算及緩存，並且一次性的調整，而不要多次、頻繁的改變這些屬性__。</p>
+    <p>佈局計算是最常見消耗系統資源的地方。如果能先在 background thread 計算好並作緩存就能避免這些問題。但上述也提到，調整佈局相關屬性(frame/bounds/center)其實都會對應到 CALayer 層級操作，還有同步通知問題，是非常消耗性能的地方。所以最好<strong>先做預先計算及緩存，並且一次性的調整，而不要多次、頻繁的改變這些屬性</strong>。</p>
   </li>
   <li>
     <p>文本計算</p>
@@ -208,7 +208,7 @@
 
     <p>螢幕上能看到的所有文本內容控件，包含 UIWebView，其底層都是通過 <code>CoreText</code> 來排版並繪製成 <code>Bitmap</code> 顯示。常見的控件（UILabel、UITextView）等，其排版以及繪製都是在主線程進行。所以當有大量的文本需要顯示的時候，CPU 的壓力就會非常大。</p>
 
-    <p>對此解決方式可以__自定義一個文本控件，並用<code>TextKit</code>或<code>CoreText</code>對文本異步繪製__。<code>CoreText</code> 對象創建好後，能直接取得文本的寬度高度等訊息。<strong>避免了多次計算（調整 UILabel 大小的時候計算一次、UILabel 繪製的時候內部又再算一次）</strong>。且<code>CoreText</code>對象佔用內存較少，可以緩存下來做多次復用。</p>
+    <p>對此解決方式可以<strong>自定義一個文本控件，並用<code>TextKit</code>或<code>CoreText</code>對文本異步繪製</strong>。<code>CoreText</code> 對象創建好後，能直接取得文本的寬度高度等訊息。<strong>避免了多次計算（調整 UILabel 大小的時候計算一次、UILabel 繪製的時候內部又再算一次）</strong>。且<code>CoreText</code>對象佔用內存較少，可以緩存下來做多次復用。</p>
   </li>
   <li>
     <p>圖片解碼</p>
@@ -243,25 +243,25 @@
 
     <p>所有的 Bitmap，不論是圖片或是文本的內容，最終都是要由內存提交到顯示卡記憶體，並綁定為 GPU 的 Texture。所以不管是提交的過程或是 GPU 調整和渲染 Texture 的過程，都要消耗不少 GPU 的資源。</p>
 
-    <p>當在較短時間內顯示大量的圖片時（如 UITableView 存在很多圖片並快速滑動的時候），CPU 佔用率很低，GPU 佔用率非常高，此時介面依然會掉幀。避免此情況的方法只能__避免在短時間內的大量圖片顯示，盡可能將多張圖片合併成一張顯示__。</p>
+    <p>當在較短時間內顯示大量的圖片時（如 UITableView 存在很多圖片並快速滑動的時候），CPU 佔用率很低，GPU 佔用率非常高，此時介面依然會掉幀。避免此情況的方法只能<strong>避免在短時間內的大量圖片顯示，盡可能將多張圖片合併成一張顯示</strong>。</p>
 
     <p>當圖片過大，超過 GPU 的最大 Texture size 時，圖片需要先由 CPU 進行預處理，這對 CPU 及 GPU 都會帶來額外的資源消耗。可以從這個網站查看各個 iPhone 機型對應的 <a href="http://iosres.com/">MAX Texture size</a>。</p>
   </li>
   <li>
     <p>視圖混合</p>
 
-    <p>當多個 View（CALayer）重疊在一起的時候，GPU 會先把它們混合到一起。如果視圖結構過於複雜，混合的過程也會消耗很多 GPU 資源。為了減少這種情況的資源消耗，可以盡量__減少 view 的層級以及數量，並設置 opaque 為不透明，減少計算 background color 時的 alpha 合成__。也可以將多張視圖預先渲染為一張圖片顯示。</p>
+    <p>當多個 View（CALayer）重疊在一起的時候，GPU 會先把它們混合到一起。如果視圖結構過於複雜，混合的過程也會消耗很多 GPU 資源。為了減少這種情況的資源消耗，可以盡量<strong>減少 view 的層級以及數量，並設置 opaque 為不透明，減少計算 background color 時的 alpha 合成</strong>。也可以將多張視圖預先渲染為一張圖片顯示。</p>
   </li>
   <li>
     <p>圖形生成</p>
 
-    <p>CALayer 的 border、圓角、陰影、遮罩、CASharpLayer 的矢量圖形顯示，通常會造成離屏渲染（Off-Screen Rendering）。</p>
+    <p>CALayer 的 border、圓角、陰影、遮罩、CASharpLayer 的矢量圖形顯示，通常會造成離屏渲染（Off-Screen Rendering)。</p>
 
     <p>GPU 的屏幕渲染分為兩種：</p>
 
     <ol>
       <li>On-Screen Rendering：指的是 GPU 的渲染操作在當前用於顯示的緩存區中。</li>
-      <li>Off-Screen Rendering：指的是 GPU 的渲染操作不在當前用於顯示的緩存區中，而是另外建立一個緩存區做渲染操作。如果我們__重寫了 drawRect: 方法，並使用了 Core Graphics 方法進行繪製得到 Bitmap 後在交給 GPU 顯示__，也算是一種離屏渲染，因為是由 CPU 渲染。</li>
+      <li>Off-Screen Rendering：指的是 GPU 的渲染操作不在當前用於顯示的緩存區中，而是另外建立一個緩存區做渲染操作。如果我們<strong>重寫了 drawRect: 方法，並使用了 Core Graphics 方法進行繪製得到 Bitmap 後在交給 GPU 顯示</strong>，也算是一種離屏渲染，因為是由 CPU 渲染。</li>
     </ol>
 
     <p>而離屏渲染（Off-Screen Rendering）的代價是很高的，原因在於：</p>
@@ -271,7 +271,7 @@
       <li><strong>上下文切換</strong>：必須先由 On-Screen 切換到 Off-Screen 環境，待 Off-Screen Rendering 結束後，把渲染結果同步到 On-Screen 環境。</li>
     </ol>
 
-    <p>所以我們要避免離屏渲染造成系統無謂的資源浪費，可以設置 <code>CALayer.shouldRasterize</code> 屬性為 YES，使得在離屏渲染發生的時候會將渲染後的內容緩存起來，在下一個 Frame 渲染時可以直接復用。但如果你又同時設置了 border、圓角 等其他屬性，緩存將不會起作用。</p>
+    <p>我們要避免離屏渲染造成系統無謂的資源浪費，可以設置 <code>CALayer.shouldRasterize</code> 屬性為 YES，使得在離屏渲染發生的時候會將渲染後的內容緩存起來，在下一個 Frame 渲染時可以直接復用。但如果你又同時設置了 border、圓角 等其他屬性，緩存將不會起作用。</p>
 
     <p>所以最好的方式，還是要避免上述的圓角、border、mask 等屬性的調用，可以用 CPU 渲染來代替。</p>
   </li>
@@ -341,7 +341,7 @@
       </div>
 
       <div class="footer-col  footer-col-3">
-        <p class="text">My name is Frank, an iOS developer from Taiwan. Currently, I work and live in Shanghai, China.
+        <p class="text">My name is Frank, an iOS developer from Taiwan. Currently, I work and live in Beiling, China.
 </p>
       </div>
     </div>
