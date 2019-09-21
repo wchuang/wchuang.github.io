@@ -5,8 +5,8 @@ permalink: /about/
 ---
 
 Hi, my name is Frank, an iOS developer from Taiwan. 
-Currently, I work and live in Shanghai, China. 
-I have 6+ years iOS and few backend development experience, 
+Currently, I work at [Didi Chuxing(DiDi)](https://www.didiglobal.com/) and live in Beiling, China. 
+I have 7+ years iOS and few backend development experience, 
 I love and focus on Objective-C, Swift, Node.js and Golang.
 You can find me on 
 [LinkedIn](https://www.linkedin.com/in/franklol/)
