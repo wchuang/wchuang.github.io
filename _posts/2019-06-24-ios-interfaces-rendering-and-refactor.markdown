@@ -3,7 +3,7 @@ layout: post
 title: "iOS 介面渲染及優化"
 date: 2019-06-24T23:56:57+08:00
 comments: true
-categories: [iOS, Performance]
+categories: [iOS, performance]
 keywords: "iOS, ui rendering, off-screen, on-screen, framebuffer"
 ---
 
@@ -19,7 +19,7 @@ keywords: "iOS, ui rendering, off-screen, on-screen, framebuffer"
 
 圖片如何從最一開始拿到的 raw data，最後展現在螢幕上讓使用者看到？所謂的 raw data 可能會從網路或者 bundle 的一張圖片取得，然後經由 CPU 計算解碼，GPU 渲染至緩存區，最後與硬體同步顯示在螢幕上。概觀圖如下：
 
-![V-sync](https://blog.wchuang.cc/images/vsync/vsync.001.jpeg)
+![V-sync](https://raw.githubusercontent.com/wchuang/wchuang.github.io/master/static/img/_posts/vsync.001.jpeg)
 
 傳統 CRT 顯示器在顯示影像會由上到下垂直掃描，掃描完成後就會呈現一個 Frame 的完整畫面，同時電子槍會回到初始位置繼續下一次的掃描。為了讓系統 Controller 知道什麼時候掃描完成並要開始下一次掃描，顯示器會發出定時信號。
 
@@ -51,7 +51,7 @@ that can be displayed on a computer monitor.
 
 但是如果 GPU 每次渲染完第二個 Frame 後就讓 Controller 讀取第二個 buffer 的資料，有可能因為 Controller 還未讀取完第一個 Frame 的資料就切換到第二個，造成了畫面畫面撕裂現象。畫面的上半部顯示舊的影像，下半部顯示了新的影像。
 
-![Screen_tearing](https://blog.wchuang.cc/images/vsync/screen_tearing.jpg)
+![Screen_tearing](https://raw.githubusercontent.com/wchuang/wchuang.github.io/master/static/img/_posts/screen_tearing.jpg)
 
 那麼要如何解決這個問題？
 
@@ -133,7 +133,7 @@ GPU 也有 V-Sync 的同步機制，當 V-Sync 開啟時，GPU 會等待顯示�
 
 	觀察調用棧會發現在設定自定義屬性 `name` 的時候，底層做了很多事情，包含了添加屬性方法、尋找屬性方法、設定屬性內容、發送 KVO 通知、`CA::Layer::begin_change()`、`CA::Layer::end_change()`、`CA::Transaction::ensure_compact()`、加鎖等的操作。
 
-	![Custom_layer](https://blog.wchuang.cc/images/vsync/custom_layer.png)
+	![Custom_layer](https://raw.githubusercontent.com/wchuang/wchuang.github.io/master/static/img/_posts/custom_layer.png)
 
 3. 對象銷毀
 
