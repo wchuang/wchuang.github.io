@@ -4,7 +4,7 @@ description: iOS development sharing, Swift, Objective-C
 author: Frank(wchuang)
 github: https://github.com/wchuang
 about: I'm Frank, an Sr. iOS Engineer, an ex-DiDier from Taiwan.
-
+disqus_shortname: wchuang
 #google_analytics: UA-XXXXXXXX-Y
 
 enableTags: true
