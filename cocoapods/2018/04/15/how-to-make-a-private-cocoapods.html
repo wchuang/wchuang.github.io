@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="/static/img/favicon.ico" />
+    <title>How to Make a Private CocoaPods? - Frank's blog - Developer, coffee lover and traveler</title>
+    <meta name="author" content="Frank(wchuang)" />
+    <meta name="description" content="How to Make a Private CocoaPods?" />
+    <meta name="keywords" content="How to Make a Private CocoaPods?, Frank's blog - Developer, coffee lover and traveler, Cocoapods" />
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="/feed.xml">
+    <meta content="1749788565247320" property="fb:app_id">
+    <meta content="Frank's blog - Developer, coffee lover and traveler" property="og:site_name">
+
+    
+
+    
+      <meta content="How to Make a Private CocoaPods?" property="og:title">
+      <meta content="article" property="og:type">
+    
+
+    
+      <meta content="iOS development sharing, Swift, Objective-C" property="og:description">
+    
+
+    
+      <meta content="http://localhost:4000/cocoapods/2018/04/15/how-to-make-a-private-cocoapods.html" property="og:url">
+    
+
+    
+      <meta content="2018-04-15T15:35:29+08:00" property="article:published_time">
+      <meta content="http://localhost:4000/about/" property="article:author">
+    
+
+    
+
+    
+      
+        <meta content="Cocoapods" property="article:section">
+      
+    
+
+    
+      
+    
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@github.io">
+    <meta name="twitter:creator" content="@github.io">
+
+    
+      <meta name="twitter:title" content="How to Make a Private CocoaPods?">
+    
+
+    
+      <meta name="twitter:url" content="http://localhost:4000/cocoapods/2018/04/15/how-to-make-a-private-cocoapods.html">
+    
+
+    
+      <meta name="twitter:description" content="iOS development sharing, Swift, Objective-C">
+    
+
+    
+
+    <!-- Font awesome icons -->
+    <link href="/static/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
+    <!-- syntax highlighting CSS -->
+    <link rel="stylesheet" href="/static/css/syntax.css">
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:400,300italic,300,400italic,700&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/super-search.css">
+    <link rel="stylesheet" href="/static/css/thickbox.css">
+    <link rel="stylesheet" href="/static/css/projects.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="col-sm-3">
+        <div class="fixed-condition">
+          <h1 class="author-name"><a href="/">Frank(wchuang)</a></h1>
+          
+            <div class="profile-about">
+              I'm Frank, an Sr. iOS Engineer, an ex-DiDier from Taiwan.
+            </div>
+          
+          <div class="social">
+            <ul>
+              
+                <li><a href="https://www.facebook.com/weicccc" target="_blank"><i class="fa fa-facebook"></i></a></li>
+              
+                <li><a href="https://twitter.com/huang_wc" target="_blank"><i class="fa fa-twitter"></i></a></li>
+              
+                <li><a href="https://www.linkedin.com/in/franklol/" target="_blank"><i class="fa fa-linkedin"></i></a></li>
+              
+                <li><a href="https://github.com/wchuang" target="_blank"><i class="fa fa-github"></i></a></li>
+              
+            </ul>
+          </div>
+          <div class="search" id="js-search">
+            <input type="text" placeholder="(sitemap)~$ type to search" class="search__input form-control" id="js-search__input">
+            <ul class="search__results" id="js-search__results"></ul>
+          </div>
+          <hr />
+          <ul class="sidebar-nav">
+            <strong>Navigation</strong>
+            <li><a href="/">Home</a></li>
+            
+              <li><a class="about" href="/about/">About Me</a></li>
+            
+              <li><a class="about" href="/feed.xml">XML Feed</a></li>
+            
+          </ul>
+        </div>
+        <!-- end /.fixed-condition -->
+      </div>
+      <div class="col-sm-8 col-offset-1 main-layout">
+        <header class="post-header">
+  <h1 class="post-title">How to Make a Private CocoaPods?</h1>
+</header>
+
+<span class="time">15 Apr 2018</span>
+
+  <span class="categories">
+    &raquo; <a href="/category/Cocoapods">Cocoapods</a>
+  </span>
+
+
+<div class="content">
+  <div class="post"><h1 id="overview">Overview</h1>
+
+<p>CocoaPods is a great tool not only for adding open source code to your project, but also for sharing components across projects.</p>
+
+<p>This post will describe how to make a private CocoaPods for your application.
+You will need a private spec repository, letting CocoaPods know where to find it and adding the PodSpecs file to the repo.</p>
+
+<p>Also, you will need a private repository that stores the source code of your pod library and an example project (if you have).</p>
+
+<h1 id="pod-creation">Pod Creation</h1>
+
+<p>We use <code class="language-plaintext highlighter-rouge">pod lib create YOUR_PROJECT_NAME</code> command to bootstrap the process.
+That will automatic generate an entire project by asking you few questions.</p>
+
+<p>For example,</p>
+
+<ol>
+  <li>What platform do you want to use? [iOS/macOS] -&gt; iOS</li>
+  <li>What language do you want to use? [Swift/ObjC] -&gt; ObjC</li>
+  <li>Would you like to inculde a demo application with your library? [Yes/No] -&gt; Yes</li>
+  <li>Which testing frameworks will you use? [Specta/Kiwi/None] -&gt; None</li>
+  <li>Would you like to view based testing? [Yes/No] -&gt; No</li>
+  <li>What is your class prefix? -&gt; FF</li>
+</ol>
+
+<h1 id="directory-of-the-pod-project">Directory of the Pod project</h1>
+
+<p>If you finish the few questions, running <code class="language-plaintext highlighter-rouge">pod install</code> on the example folder.
+The basic pod library is born.</p>
+
+<p>You can add your dependency libraries you need like AFNetworking on Podfile or some static frameworks.</p>
+
+<p>The folder structure will look like this:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>TestPro 
+├── Example 
+│   ├── Podfile 
+│   ├── Podfile.lock 
+│   ├── Pods 
+│   ├── TestPro 
+│   ├── TestPro.xcodeproj 
+│   ├── TestPro.xcworkspace 
+│   └── Tests 
+├── LICENSE 
+├── README.md 
+├── TestPro 
+│   ├── Assets 
+│   └── Classes 
+├── TestPro.podspec 
+└── _Pods.xcodeproj -&gt; Example/Pods/Pods.xcodeproj
+</code></pre></div></div>
+
+<ul>
+  <li>_Pods.xcodeproj: A symlink to your Pod’s project for Carthage support.</li>
+  <li>TestPro.podspec: The PodSpec of your library, you can add some formulas such as spec name, spec version or the path of source files, and so on. You can find more syntax information on Reference section below.</li>
+  <li>Assets &amp; Classes: That contains all .swift/.h/.m files and images you will need.</li>
+  <li>Pods folder: That stores the external pod libaries you need, including a dynamic framework be installed from Podfile or a static framework you added manually.</li>
+  <li>Example folder: That stores the example project using the Pod library.</li>
+</ul>
+
+<h1 id="add-custom-files-as-you-need">Add custom files as you need</h1>
+
+<h4 id="dynamic-frameworks">Dynamic frameworks</h4>
+
+<p>You can use some dependency frameworks through Podfile,
+for example,</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>source 'https://github.com/CocoaPods/Specs.git' 
+
+platform :ios, '8.0' 
+use_frameworks! 
+
+inhibit_all_warnings! 
+
+target 'TestPro_Example' do 
+
+	pod 'TestPro', :path =&gt; '../' 
+	pod 'AFNetworking' 
+	
+	target 'TestPro_Tests' do 
+		inherit! :search_paths 
+	end 
+	
+end
+</code></pre></div></div>
+
+<p>then run <code class="language-plaintext highlighter-rouge">pod install</code>, that will fetch the AFNetworking library into the Pods folder.</p>
+
+<h4 id="static-frameworks">Static frameworks</h4>
+
+<p>If there are no Pod resource support, you can add the library into the Pods folder by manually.</p>
+
+<p>Then modify the PodSpec file by adding static_framework and dependency.</p>
+
+<p>For example,</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>s.static_framework = true 
+s.dependency 'AliPay_SDK'
+</code></pre></div></div>
+
+<p>then run <code class="language-plaintext highlighter-rouge">pod install</code>, that will generate the AliPay_SDK library dependency on Xcode.</p>
+
+<h4 id="wrappers-files">Wrappers files</h4>
+
+<p>You can new some wrapper files on Classes folder that will handle those libraries for usage more easier.</p>
+
+<h1 id="push-the-pod-source-code">Push the Pod source code</h1>
+
+<p>After you finished features development and write some descriptions on README.md file.</p>
+
+<p>You need to commit and tag a version number, then push the source code to the remote repository.</p>
+
+<p>We suggest that the tag number should be equal to the PodSpec version number and follow <a href="https://semver.org/">Semantic version define</a>.</p>
+
+<p>For example,</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git add . 
+git commit -m 'First release' 
+git tag '1.0.0' 
+git push origin master 
+git push --tags
+</code></pre></div></div>
+
+<h1 id="deploy-the-pod-library">Deploy the Pod library</h1>
+
+<p>Using the URL of your private spec repository, adding your repo using:</p>
+
+<p><code class="language-plaintext highlighter-rouge">pod repo add POD_NAME THE_URL_OF_SPEC_REPOSITORY</code>.</p>
+
+<p>Save your PodSpec file and add to the repo:</p>
+
+<p><code class="language-plaintext highlighter-rouge">pod repo push POD_NAME YOUR_PODSPEC_FILE</code>.</p>
+
+<h1 id="pod-update">Pod update</h1>
+
+<p>Once we modified the Pod library, we need to change the version number on PodSpec file.</p>
+
+<p>Before you deploy the Pod library, you need to commit, bump up tag version number and push source code to the remote repo under source control.</p>
+
+<p>If you facing a problem about <code class="language-plaintext highlighter-rouge">The TestPro.podspec specification does not validate.</code> when running <code class="language-plaintext highlighter-rouge">pod repo push POD_NAME YOUR_PODSPEC_FILE</code>.</p>
+
+<p>You can run <code class="language-plaintext highlighter-rouge">pod repo push POD_NAME YOUR_PODSPEC_FILE --verbose --use-libraries --allow-warnings</code> to resolve it.</p>
+
+<h3 id="reference">Reference</h3>
+
+<ul>
+  <li><a href="https://guides.cocoapods.org/syntax/podspec.html#specification">Podspec Syntax Reference</a></li>
+  <li><a href="https://guides.cocoapods.org/making/using-pod-lib-create">Using Pod Lib Create</a></li>
+  <li><a href="https://guides.cocoapods.org/making/private-cocoapods">Private Pods</a></li>
+  <li><a href="https://semver.org/">Semantic Versioning 2.0.0</a></li>
+</ul>
+</div>
+  <div class="share-page">
+  <span style="float: left;">Share this on &rarr;&nbsp;&nbsp;</span>
+
+  <!-- Twitter -->
+  <a href="https://twitter.com/share" class="twitter-share-button" data-via="github.io">Tweet</a>
+  <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+
+  <!-- Facebook -->
+  <div class="fb-share-button" data-href="http://localhost:4000/cocoapods/2018/04/15/how-to-make-a-private-cocoapods.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
+</div>
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.6&appId=1749788565247320";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+</div>
+
+
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+        
+          
+      
+    
+  
+  
+
+<div class="PageNavigation">
+  
+    <a class="prev" href="/ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html">&laquo; PresentViewController delay on UITableViewCell</a>
+  
+  
+    <a class="next" href="/mmap/2018/06/18/what-is-mmap-and-how-it-works.html">What Is Mmap and How It Works? &raquo;</a>
+  
+</div>
+
+<div class="disqus-comments">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+    /* <![CDATA[ */
+    var disqus_shortname = "";
+    var disqus_identifier = "http://localhost:4000_How to Make a Private CocoaPods?";
+    var disqus_title = "How to Make a Private CocoaPods?";
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    /* ]]> */
+  </script>
+</div>
+
+        <footer>
+          &copy; Frank(wchuang)
+          
+            - <a href="https://github.com/wchuang">https://github.com/wchuang</a> - Powered by Jekyll.
+          
+        </footer>
+      </div>
+      <!-- end /.col-sm-8 -->
+    </div>
+    <!-- end /.container -->
+
+    <!-- Bootstrap core JavaScript -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/js/super-search.js"></script>
+    <script src="/static/js/thickbox-compressed.js"></script>
+    <script src="/static/js/projects.js"></script>
+  </body>
+</html>
+

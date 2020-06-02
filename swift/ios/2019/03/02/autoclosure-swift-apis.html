@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="/static/img/favicon.ico" />
+    <title>如何使用 @autoclosure 設計 Swift APIs - Frank's blog - Developer, coffee lover and traveler</title>
+    <meta name="author" content="Frank(wchuang)" />
+    <meta name="description" content="如何使用 @autoclosure 設計 Swift APIs" />
+    <meta name="keywords" content="如何使用 @autoclosure 設計 Swift APIs, Frank's blog - Developer, coffee lover and traveler, Swift, iOS" />
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="/feed.xml">
+    <meta content="1749788565247320" property="fb:app_id">
+    <meta content="Frank's blog - Developer, coffee lover and traveler" property="og:site_name">
+
+    
+
+    
+      <meta content="如何使用 @autoclosure 設計 Swift APIs" property="og:title">
+      <meta content="article" property="og:type">
+    
+
+    
+      <meta content="iOS development sharing, Swift, Objective-C" property="og:description">
+    
+
+    
+      <meta content="http://localhost:4000/swift/ios/2019/03/02/autoclosure-swift-apis.html" property="og:url">
+    
+
+    
+      <meta content="2019-03-02T16:31:08+08:00" property="article:published_time">
+      <meta content="http://localhost:4000/about/" property="article:author">
+    
+
+    
+
+    
+      
+        <meta content="Swift" property="article:section">
+      
+    
+
+    
+      
+    
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@github.io">
+    <meta name="twitter:creator" content="@github.io">
+
+    
+      <meta name="twitter:title" content="如何使用 @autoclosure 設計 Swift APIs">
+    
+
+    
+      <meta name="twitter:url" content="http://localhost:4000/swift/ios/2019/03/02/autoclosure-swift-apis.html">
+    
+
+    
+      <meta name="twitter:description" content="iOS development sharing, Swift, Objective-C">
+    
+
+    
+
+    <!-- Font awesome icons -->
+    <link href="/static/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
+    <!-- syntax highlighting CSS -->
+    <link rel="stylesheet" href="/static/css/syntax.css">
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:400,300italic,300,400italic,700&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/super-search.css">
+    <link rel="stylesheet" href="/static/css/thickbox.css">
+    <link rel="stylesheet" href="/static/css/projects.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="col-sm-3">
+        <div class="fixed-condition">
+          <h1 class="author-name"><a href="/">Frank(wchuang)</a></h1>
+          
+            <div class="profile-about">
+              I'm Frank, an Sr. iOS Engineer, an ex-DiDier from Taiwan.
+            </div>
+          
+          <div class="social">
+            <ul>
+              
+                <li><a href="https://www.facebook.com/weicccc" target="_blank"><i class="fa fa-facebook"></i></a></li>
+              
+                <li><a href="https://twitter.com/huang_wc" target="_blank"><i class="fa fa-twitter"></i></a></li>
+              
+                <li><a href="https://www.linkedin.com/in/franklol/" target="_blank"><i class="fa fa-linkedin"></i></a></li>
+              
+                <li><a href="https://github.com/wchuang" target="_blank"><i class="fa fa-github"></i></a></li>
+              
+            </ul>
+          </div>
+          <div class="search" id="js-search">
+            <input type="text" placeholder="(sitemap)~$ type to search" class="search__input form-control" id="js-search__input">
+            <ul class="search__results" id="js-search__results"></ul>
+          </div>
+          <hr />
+          <ul class="sidebar-nav">
+            <strong>Navigation</strong>
+            <li><a href="/">Home</a></li>
+            
+              <li><a class="about" href="/about/">About Me</a></li>
+            
+              <li><a class="about" href="/feed.xml">XML Feed</a></li>
+            
+          </ul>
+        </div>
+        <!-- end /.fixed-condition -->
+      </div>
+      <div class="col-sm-8 col-offset-1 main-layout">
+        <header class="post-header">
+  <h1 class="post-title">如何使用 @autoclosure 設計 Swift APIs</h1>
+</header>
+
+<span class="time">02 Mar 2019</span>
+
+  <span class="categories">
+    &raquo; <a href="/category/Swift">Swift</a>, <a href="/category/iOS">iOS</a>
+  </span>
+
+
+<div class="content">
+  <div class="post"><p>Swift 中的 <code class="language-plaintext highlighter-rouge">@autoclosure</code> 屬性，可以讓你定義一個 <code class="language-plaintext highlighter-rouge">可自動取得一個閉包 (closure) 內的包裹 (wrapped)</code> 的參數。它主要用於延緩執行時間，而不是當這個參數傳入的時候就直接使用，因為執行的動作可能有點耗時。這麼說有點繞口，下面是一個官方 Swift 標準函式庫的 <code class="language-plaintext highlighter-rouge">assert</code> 例子，我們來看看 Apple 是怎麼實現這個方法的。</p>
+
+<p>由於 <code class="language-plaintext highlighter-rouge">assert</code> 只有在 <code class="language-plaintext highlighter-rouge">debug</code> 模式下才會被觸發，在 <code class="language-plaintext highlighter-rouge">release</code> 模式下會被返回而不會執行 <code class="language-plaintext highlighter-rouge">expression</code>，完整的實作請看源碼: <a href="https://github.com/apple/swift/blob/master/stdlib/public/core/Assert.swift">Assert.swift</a></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func assert(_ expression: @autoclosure () -&gt; Bool, 
+			_ message: @autoclosure () -&gt; String) {
+	guard let isDebug else { return }
+
+	if !expression() {
+		assertionFailure(message())
+	}
+}
+</code></pre></div></div>
+
+<p>如果 <code class="language-plaintext highlighter-rouge">assert</code> 的實作方式是用一般的閉包實現，那你會這樣呼叫：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>assert({ someCondition() }, { "hey, it failed." })
+</code></pre></div></div>
+
+<p>現在你只需要這樣即可，不用在傳入一個閉包參照。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>assert(someCondition(), "hey, it failed.")
+</code></pre></div></div>
+
+<p>那麼如何運用 <code class="language-plaintext highlighter-rouge">@autoclosure</code> 這個方便的特性在實際 APIs 設計上面呢？</p>
+
+<p>###1. Inlining assignments</p>
+
+<p>在方法呼叫的時候，把一個表達式當做一個參數傳入。一般在 iOS 處理畫面動畫你會用到：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>UIView.animate(withDuration: 0.25) {
+	view.frame.origin.y = 100
+}
+</code></pre></div></div>
+
+<p>在 <code class="language-plaintext highlighter-rouge">@autoclosure</code> 中，我們定義一個方法來化簡這樣的呼叫方式。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>func animate(_ animation: @autoclosure @escaping () -&gt; Void, 
+				duration: TimeInterval = 0.25) {
+	UIView.animate(withDuration: duration, animations: animation)
+}
+</code></pre></div></div>
+
+<p>如此一來，我們只需要傳入一個特定操作表達式，不用再寫額外的 <code class="language-plaintext highlighter-rouge">{}</code>。
+增加了程式碼的可讀性以及降低複雜度。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>animate(view.frame.origin.y = 100)
+</code></pre></div></div>
+
+<h3 id="2-passing-errors-as-expressions">2. Passing errors as expressions</h3>
+
+<p>我們常常會需要寫一個工具來處理 errors 的各種情況，此時使用 <code class="language-plaintext highlighter-rouge">@autoclosure</code> 就變得非常方便。
+例如：我們寫一個 <code class="language-plaintext highlighter-rouge">extension</code> 來擴展 <code class="language-plaintext highlighter-rouge">Optional</code>，讓我們可以容易的解包 (unwrap) 或拋出異常 (throwing API)。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>extension Optional {
+	func unwrapOrThrow(_ errorExpression: @autoclosure () -&gt; Error) throws -&gt; Wrapped {
+		guard let value = self else {
+			throw errorExpression()
+		}
+		return value
+	}
+}
+</code></pre></div></div>
+
+<p>這跟上述的 <code class="language-plaintext highlighter-rouge">assert</code> 一樣，我們只需要關注在錯誤的表達式上面，而不需要每次都去判斷是否解包成功 (unwarp)。
+我們現在可以這樣使用 <code class="language-plaintext highlighter-rouge">unwarpOrThrow</code> API：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>let name = try argument(at: 1).unwarpOrThrow(ArgumentError.missingName)
+</code></pre></div></div>
+
+<h3 id="3-type-inference-using-default-values">3. Type inference using default values</h3>
+
+<p>很多時候當我們從 <code class="language-plaintext highlighter-rouge">Dictionary</code>, <code class="language-plaintext highlighter-rouge">TextField.text</code>, <code class="language-plaintext highlighter-rouge">UserDefaults</code> 或者其他地方取值的時候，常常會碰到可選值 (optional value) 的情況。</p>
+
+<p>如：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>let coins = (dictionary["numberOfCoins"] as? Int) ?? 100
+</code></pre></div></div>
+
+<p>這樣的寫法用了很多操作符號，程式碼變得難以閱讀。
+這時候可以用 <code class="language-plaintext highlighter-rouge">@aotuclosure</code> 來改善寫法。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>let coins = dictioanry.value(forKey: "numberOfCoins", defaultValue: 100)
+</code></pre></div></div>
+
+<p>這邊賦予了一個預設值給 <code class="language-plaintext highlighter-rouge">coins</code>，當內容為 nil 的情況。這樣是不是好閱讀多了，也不需要每次都去判斷是否為 nil。:grin:
+不過我們還需要一個方法擴展 Dictionary。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>extension Dictionary where Value == Any {
+	func value&lt;T&gt;(forKey key: Key, defaultValue: @autoclosure () -&gt; T) -&gt; T {
+		guard let value = self[key] as? T else { return defaultValue() }
+		return value
+	}
+}
+</code></pre></div></div>
+
+<h3 id="結論">結論</h3>
+
+<p><code class="language-plaintext highlighter-rouge">@autoclosure</code> 是一個很有用的工具，讓你可以關注在你想處理的事情上面，並減少了重複性判斷，大大增加了程式碼的可讀性。</p>
+
+<h3 id="ref">Ref.</h3>
+
+<p><a href="https://www.swiftbysundell.com/posts/using-autoclosure-when-designing-swift-apis">swiftbysundell</a></p>
+
+</div>
+  <div class="share-page">
+  <span style="float: left;">Share this on &rarr;&nbsp;&nbsp;</span>
+
+  <!-- Twitter -->
+  <a href="https://twitter.com/share" class="twitter-share-button" data-via="github.io">Tweet</a>
+  <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+
+  <!-- Facebook -->
+  <div class="fb-share-button" data-href="http://localhost:4000/swift/ios/2019/03/02/autoclosure-swift-apis.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
+</div>
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.6&appId=1749788565247320";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+</div>
+
+
+  
+    
+      
+        
+          
+      
+          
+            
+            <div class="panel-body">
+              <h4>Related Posts</h4>
+              <ul>
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html">Atomic 原理與線程安全</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/atomic">atomic</a>, <a href="/category/thread">thread</a>)
+                  
+                </li>
+          
+          
+        
+      
+    
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html">iOS 介面渲染及優化</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/Performance">Performance</a>)
+                  
+                </li>
+          
+          
+        
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/gcd/swift/ios/2018/11/04/swift-gcd.html">那些你很少用的 Swift GCD 方法</a>
+                  
+                    (Categories: <a href="/category/GCD">GCD</a>, <a href="/category/Swift">Swift</a>, <a href="/category/iOS">iOS</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html">PresentViewController delay on UITableViewCell</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/UIView">UIView</a>)
+                  
+                </li>
+          
+          
+        
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/objective-c/2015/10/14/custom-nslog.html">Custom NSLog</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/Objective-C">Objective-C</a>)
+                  
+                </li>
+          
+          
+        
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/ota/2015/04/08/distribute-an-ios-application-ota.html">Distribute an iOS application OTA</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/OTA">OTA</a>)
+                  
+                </li>
+          
+          
+        
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+  
+  </ul>
+</div>
+
+
+<div class="PageNavigation">
+  
+    <a class="prev" href="/gcd/swift/ios/2018/11/04/swift-gcd.html">&laquo; 那些你很少用的 Swift GCD 方法</a>
+  
+  
+    <a class="next" href="/ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html">iOS 介面渲染及優化 &raquo;</a>
+  
+</div>
+
+<div class="disqus-comments">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+    /* <![CDATA[ */
+    var disqus_shortname = "";
+    var disqus_identifier = "http://localhost:4000_如何使用 @autoclosure 設計 Swift APIs";
+    var disqus_title = "如何使用 @autoclosure 設計 Swift APIs";
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    /* ]]> */
+  </script>
+</div>
+
+        <footer>
+          &copy; Frank(wchuang)
+          
+            - <a href="https://github.com/wchuang">https://github.com/wchuang</a> - Powered by Jekyll.
+          
+        </footer>
+      </div>
+      <!-- end /.col-sm-8 -->
+    </div>
+    <!-- end /.container -->
+
+    <!-- Bootstrap core JavaScript -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/js/super-search.js"></script>
+    <script src="/static/js/thickbox-compressed.js"></script>
+    <script src="/static/js/projects.js"></script>
+  </body>
+</html>
+

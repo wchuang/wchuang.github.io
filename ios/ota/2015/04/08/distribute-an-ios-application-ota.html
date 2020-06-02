@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="/static/img/favicon.ico" />
+    <title>Distribute an iOS application OTA - Frank's blog - Developer, coffee lover and traveler</title>
+    <meta name="author" content="Frank(wchuang)" />
+    <meta name="description" content="Distribute an iOS application OTA" />
+    <meta name="keywords" content="Distribute an iOS application OTA, Frank's blog - Developer, coffee lover and traveler, iOS, OTA" />
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="/feed.xml">
+    <meta content="1749788565247320" property="fb:app_id">
+    <meta content="Frank's blog - Developer, coffee lover and traveler" property="og:site_name">
+
+    
+
+    
+      <meta content="Distribute an iOS application OTA" property="og:title">
+      <meta content="article" property="og:type">
+    
+
+    
+      <meta content="建立可給外部使用者測試的 AdHoc iOS app OTA" property="og:description">
+    
+
+    
+      <meta content="http://localhost:4000/ios/ota/2015/04/08/distribute-an-ios-application-ota.html" property="og:url">
+    
+
+    
+      <meta content="2015-04-08T00:53:56+08:00" property="article:published_time">
+      <meta content="http://localhost:4000/about/" property="article:author">
+    
+
+    
+
+    
+      
+        <meta content="iOS" property="article:section">
+      
+    
+
+    
+      
+    
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@github.io">
+    <meta name="twitter:creator" content="@github.io">
+
+    
+      <meta name="twitter:title" content="Distribute an iOS application OTA">
+    
+
+    
+      <meta name="twitter:url" content="http://localhost:4000/ios/ota/2015/04/08/distribute-an-ios-application-ota.html">
+    
+
+    
+      <meta name="twitter:description" content="建立可給外部使用者測試的 AdHoc iOS app OTA">
+    
+
+    
+
+    <!-- Font awesome icons -->
+    <link href="/static/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
+    <!-- syntax highlighting CSS -->
+    <link rel="stylesheet" href="/static/css/syntax.css">
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:400,300italic,300,400italic,700&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/super-search.css">
+    <link rel="stylesheet" href="/static/css/thickbox.css">
+    <link rel="stylesheet" href="/static/css/projects.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="col-sm-3">
+        <div class="fixed-condition">
+          <h1 class="author-name"><a href="/">Frank(wchuang)</a></h1>
+          
+            <div class="profile-about">
+              I'm Frank, an Sr. iOS Engineer, an ex-DiDier from Taiwan.
+            </div>
+          
+          <div class="social">
+            <ul>
+              
+                <li><a href="https://www.facebook.com/weicccc" target="_blank"><i class="fa fa-facebook"></i></a></li>
+              
+                <li><a href="https://twitter.com/huang_wc" target="_blank"><i class="fa fa-twitter"></i></a></li>
+              
+                <li><a href="https://www.linkedin.com/in/franklol/" target="_blank"><i class="fa fa-linkedin"></i></a></li>
+              
+                <li><a href="https://github.com/wchuang" target="_blank"><i class="fa fa-github"></i></a></li>
+              
+            </ul>
+          </div>
+          <div class="search" id="js-search">
+            <input type="text" placeholder="(sitemap)~$ type to search" class="search__input form-control" id="js-search__input">
+            <ul class="search__results" id="js-search__results"></ul>
+          </div>
+          <hr />
+          <ul class="sidebar-nav">
+            <strong>Navigation</strong>
+            <li><a href="/">Home</a></li>
+            
+              <li><a class="about" href="/about/">About Me</a></li>
+            
+              <li><a class="about" href="/feed.xml">XML Feed</a></li>
+            
+          </ul>
+        </div>
+        <!-- end /.fixed-condition -->
+      </div>
+      <div class="col-sm-8 col-offset-1 main-layout">
+        <header class="post-header">
+  <h1 class="post-title">Distribute an iOS application OTA</h1>
+</header>
+
+<span class="time">08 Apr 2015</span>
+
+  <span class="categories">
+    &raquo; <a href="/category/iOS">iOS</a>, <a href="/category/OTA">OTA</a>
+  </span>
+
+
+<div class="content">
+  <div class="post"><p>簡單記錄如何建立給外部使用者或客戶測試的 AdHoc 版本</p>
+
+<p>iOS app OTA (over the air)，</p>
+
+<p>而如何產生憑證及 archive 出 AdHoc 就不再贅述了，網路也有很多資源。</p>
+
+<ol>
+  <li>
+    <p>重要的是描述下載位置的 HTML、描述 app 的 plist 檔案以及 app 的 .ipa 檔案，找台伺服器來存放它們吧！這邊推薦使用 Dropbox 方便又好用，當然你也可以用自家 server 或其它 web storage services。</p>
+  </li>
+  <li>
+    <p>.ipa 檔：AdHoc 出 .ipa 檔案，並上傳到 Dropbox 底下，點選分享後，會拿到一個分享連結，如 https://www.dropbox.com/s/ooxxaabbcc/ForTestingApp.ipa?dl=0 ，把 www.dropbox.com 改成 dl.dropboxusercontent.com 及 ?dl=0 拿掉，會變成 -&gt; https://dl.dropboxusercontent.com/s/ooxxaabbcc/ForTestingApp.ipa 。</p>
+  </li>
+  <li>
+    <p>plist 檔：加入一個 Array 的 key，名稱取為 assets，負責描述 .ipa、app icon 兩張（57 * 57）及 (512 * 512) 的分享連結路徑 (與上述 .ipa 檔案ㄧ樣，需放在 dropbox 中，並開啟分享取得連結)，如果不放圖片的話，下載中就看不到 app 的 icon 囉。再加入一個 Dictionary 的 key，名稱取為 metadata，描述 app 相關資訊，如 bundle-identifier、title 或 subtitle 等等。最後一樣開啟分享取得連結。</p>
+  </li>
+  <li>
+    <p>HTML 檔：最後是 HTML，拿來記錄上述 plist 檔的分享位置，並做個畫面呈現給使用者點選下載，可以簡單放上下列程式。</p>
+
+ 	<a href="itms-services://?action=download-manifest&amp;url=  	https://dl.dropboxusercontent.com/s/ooxxaabbcc/ForTestingApp.plist">
+ 	Install this awesome app!</a>
+  </li>
+</ol>
+
+<p>完成後你就可以把 HTML 的連結給你的朋友或客戶測試囉，不過要記得把手機的 UDID 加進去 Provisioning Profile。</p>
+
+<p>以上，有不清楚的地方歡迎指教 :p</p>
+
+</div>
+  <div class="share-page">
+  <span style="float: left;">Share this on &rarr;&nbsp;&nbsp;</span>
+
+  <!-- Twitter -->
+  <a href="https://twitter.com/share" class="twitter-share-button" data-via="github.io">Tweet</a>
+  <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+
+  <!-- Facebook -->
+  <div class="fb-share-button" data-href="http://localhost:4000/ios/ota/2015/04/08/distribute-an-ios-application-ota.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
+</div>
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.6&appId=1749788565247320";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+</div>
+
+
+  
+    
+      
+        
+          
+            
+            <div class="panel-body">
+              <h4>Related Posts</h4>
+              <ul>
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html">Atomic 原理與線程安全</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/atomic">atomic</a>, <a href="/category/thread">thread</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html">iOS 介面渲染及優化</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/Performance">Performance</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/swift/ios/2019/03/02/autoclosure-swift-apis.html">如何使用 @autoclosure 設計 Swift APIs</a>
+                  
+                    (Categories: <a href="/category/Swift">Swift</a>, <a href="/category/iOS">iOS</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/gcd/swift/ios/2018/11/04/swift-gcd.html">那些你很少用的 Swift GCD 方法</a>
+                  
+                    (Categories: <a href="/category/GCD">GCD</a>, <a href="/category/Swift">Swift</a>, <a href="/category/iOS">iOS</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html">PresentViewController delay on UITableViewCell</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/UIView">UIView</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/objective-c/2015/10/14/custom-nslog.html">Custom NSLog</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/Objective-C">Objective-C</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+  
+  </ul>
+</div>
+
+
+<div class="PageNavigation">
+  
+    <a class="prev" href="/uiview/objective-c/ios/2014/11/11/uiview-viewwithtag.html">&laquo; [UIView viewWithTag:]</a>
+  
+  
+    <a class="next" href="/ios/objective-c/2015/10/14/custom-nslog.html">Custom NSLog &raquo;</a>
+  
+</div>
+
+<div class="disqus-comments">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+    /* <![CDATA[ */
+    var disqus_shortname = "";
+    var disqus_identifier = "http://localhost:4000_Distribute an iOS application OTA";
+    var disqus_title = "Distribute an iOS application OTA";
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    /* ]]> */
+  </script>
+</div>
+
+        <footer>
+          &copy; Frank(wchuang)
+          
+            - <a href="https://github.com/wchuang">https://github.com/wchuang</a> - Powered by Jekyll.
+          
+        </footer>
+      </div>
+      <!-- end /.col-sm-8 -->
+    </div>
+    <!-- end /.container -->
+
+    <!-- Bootstrap core JavaScript -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/js/super-search.js"></script>
+    <script src="/static/js/thickbox-compressed.js"></script>
+    <script src="/static/js/projects.js"></script>
+  </body>
+</html>
+

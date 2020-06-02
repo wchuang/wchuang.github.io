@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="/static/img/favicon.ico" />
+    <title>PresentViewController delay on UITableViewCell - Frank's blog - Developer, coffee lover and traveler</title>
+    <meta name="author" content="Frank(wchuang)" />
+    <meta name="description" content="PresentViewController delay on UITableViewCell" />
+    <meta name="keywords" content="PresentViewController delay on UITableViewCell, Frank's blog - Developer, coffee lover and traveler, iOS, UIView" />
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="/feed.xml">
+    <meta content="1749788565247320" property="fb:app_id">
+    <meta content="Frank's blog - Developer, coffee lover and traveler" property="og:site_name">
+
+    
+
+    
+      <meta content="PresentViewController delay on UITableViewCell" property="og:title">
+      <meta content="article" property="og:type">
+    
+
+    
+      <meta content="presenting view controller delay on UITableViewCell" property="og:description">
+    
+
+    
+      <meta content="http://localhost:4000/ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html" property="og:url">
+    
+
+    
+      <meta content="2015-11-22T02:36:24+08:00" property="article:published_time">
+      <meta content="http://localhost:4000/about/" property="article:author">
+    
+
+    
+
+    
+      
+        <meta content="iOS" property="article:section">
+      
+    
+
+    
+      
+    
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@github.io">
+    <meta name="twitter:creator" content="@github.io">
+
+    
+      <meta name="twitter:title" content="PresentViewController delay on UITableViewCell">
+    
+
+    
+      <meta name="twitter:url" content="http://localhost:4000/ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html">
+    
+
+    
+      <meta name="twitter:description" content="presenting view controller delay on UITableViewCell">
+    
+
+    
+
+    <!-- Font awesome icons -->
+    <link href="/static/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
+    <!-- syntax highlighting CSS -->
+    <link rel="stylesheet" href="/static/css/syntax.css">
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:400,300italic,300,400italic,700&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/super-search.css">
+    <link rel="stylesheet" href="/static/css/thickbox.css">
+    <link rel="stylesheet" href="/static/css/projects.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="col-sm-3">
+        <div class="fixed-condition">
+          <h1 class="author-name"><a href="/">Frank(wchuang)</a></h1>
+          
+            <div class="profile-about">
+              I'm Frank, an Sr. iOS Engineer, an ex-DiDier from Taiwan.
+            </div>
+          
+          <div class="social">
+            <ul>
+              
+                <li><a href="https://www.facebook.com/weicccc" target="_blank"><i class="fa fa-facebook"></i></a></li>
+              
+                <li><a href="https://twitter.com/huang_wc" target="_blank"><i class="fa fa-twitter"></i></a></li>
+              
+                <li><a href="https://www.linkedin.com/in/franklol/" target="_blank"><i class="fa fa-linkedin"></i></a></li>
+              
+                <li><a href="https://github.com/wchuang" target="_blank"><i class="fa fa-github"></i></a></li>
+              
+            </ul>
+          </div>
+          <div class="search" id="js-search">
+            <input type="text" placeholder="(sitemap)~$ type to search" class="search__input form-control" id="js-search__input">
+            <ul class="search__results" id="js-search__results"></ul>
+          </div>
+          <hr />
+          <ul class="sidebar-nav">
+            <strong>Navigation</strong>
+            <li><a href="/">Home</a></li>
+            
+              <li><a class="about" href="/about/">About Me</a></li>
+            
+              <li><a class="about" href="/feed.xml">XML Feed</a></li>
+            
+          </ul>
+        </div>
+        <!-- end /.fixed-condition -->
+      </div>
+      <div class="col-sm-8 col-offset-1 main-layout">
+        <header class="post-header">
+  <h1 class="post-title">PresentViewController delay on UITableViewCell</h1>
+</header>
+
+<span class="time">22 Nov 2015</span>
+
+  <span class="categories">
+    &raquo; <a href="/category/iOS">iOS</a>, <a href="/category/UIView">UIView</a>
+  </span>
+
+
+<div class="content">
+  <div class="post"><p>最近開發常常遇到：當點選 UITableViewCell 時去呼叫 presentViewController:animated:completion:，欲開啟的 view controller 會延遲出現的問題，這個似乎是 iOS 7 的 bug，不過之前開發手機卻沒什麼遇到，直到最近開發 iPad 才發現。</p>
+
+<p>原因是當 UITableViewCell 的 selectionStyle 設為 UITableViewCellSelectionStyleNone，也就是希望不要出現點選效果時，造成沒有動畫效果去觸發 main runloop，所以 thread 好像是睡著了…</p>
+
+<p>解決方式：</p>
+
+<p>在呼叫 presentViewController:animated:completion: 後</p>
+
+<ul>
+  <li>呼叫 CFRunLoopWakeUp(CFRunLoopGetCurrent())</li>
+  <li>或用 GCD 在 main queue 執行一個空的 block：dispatch_async(dispatch_get_main_queue(), ^{})</li>
+  <li>或用 GCD 在 main queue 直接呼叫 presentViewController:animated:completion:</li>
+</ul>
+
+<p>From: <a href="http://stackoverflow.com/questions/21075540/presentviewcontrolleranimatedyes-view-will-not-appear-until-user-taps-again">Stackoverflow 討論</a>, <a href="https://developer.apple.com/library/ios/documentation/Cocoa/Conceptual/Multithreading/RunLoopManagement/RunLoopManagement.html">Thread run loops</a></p>
+</div>
+  <div class="share-page">
+  <span style="float: left;">Share this on &rarr;&nbsp;&nbsp;</span>
+
+  <!-- Twitter -->
+  <a href="https://twitter.com/share" class="twitter-share-button" data-via="github.io">Tweet</a>
+  <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+
+  <!-- Facebook -->
+  <div class="fb-share-button" data-href="http://localhost:4000/ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
+</div>
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.6&appId=1749788565247320";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+</div>
+
+
+  
+    
+      
+        
+          
+            
+            <div class="panel-body">
+              <h4>Related Posts</h4>
+              <ul>
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html">Atomic 原理與線程安全</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/atomic">atomic</a>, <a href="/category/thread">thread</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html">iOS 介面渲染及優化</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/Performance">Performance</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/swift/ios/2019/03/02/autoclosure-swift-apis.html">如何使用 @autoclosure 設計 Swift APIs</a>
+                  
+                    (Categories: <a href="/category/Swift">Swift</a>, <a href="/category/iOS">iOS</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/gcd/swift/ios/2018/11/04/swift-gcd.html">那些你很少用的 Swift GCD 方法</a>
+                  
+                    (Categories: <a href="/category/GCD">GCD</a>, <a href="/category/Swift">Swift</a>, <a href="/category/iOS">iOS</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/objective-c/2015/10/14/custom-nslog.html">Custom NSLog</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/Objective-C">Objective-C</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/ota/2015/04/08/distribute-an-ios-application-ota.html">Distribute an iOS application OTA</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/OTA">OTA</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+    
+  
+  
+  </ul>
+</div>
+
+
+<div class="PageNavigation">
+  
+    <a class="prev" href="/ios/objective-c/2015/10/14/custom-nslog.html">&laquo; Custom NSLog</a>
+  
+  
+    <a class="next" href="/cocoapods/2018/04/15/how-to-make-a-private-cocoapods.html">How to Make a Private CocoaPods? &raquo;</a>
+  
+</div>
+
+<div class="disqus-comments">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+    /* <![CDATA[ */
+    var disqus_shortname = "";
+    var disqus_identifier = "http://localhost:4000_PresentViewController delay on UITableViewCell";
+    var disqus_title = "PresentViewController delay on UITableViewCell";
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    /* ]]> */
+  </script>
+</div>
+
+        <footer>
+          &copy; Frank(wchuang)
+          
+            - <a href="https://github.com/wchuang">https://github.com/wchuang</a> - Powered by Jekyll.
+          
+        </footer>
+      </div>
+      <!-- end /.col-sm-8 -->
+    </div>
+    <!-- end /.container -->
+
+    <!-- Bootstrap core JavaScript -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/js/super-search.js"></script>
+    <script src="/static/js/thickbox-compressed.js"></script>
+    <script src="/static/js/projects.js"></script>
+  </body>
+</html>
+

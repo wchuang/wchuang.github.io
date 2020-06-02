@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="/static/img/favicon.ico" />
+    <title>Atomic 原理與線程安全 - Frank's blog - Developer, coffee lover and traveler</title>
+    <meta name="author" content="Frank(wchuang)" />
+    <meta name="description" content="Atomic 原理與線程安全" />
+    <meta name="keywords" content="Atomic 原理與線程安全, Frank's blog - Developer, coffee lover and traveler, iOS, atomic, thread" />
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="/feed.xml">
+    <meta content="1749788565247320" property="fb:app_id">
+    <meta content="Frank's blog - Developer, coffee lover and traveler" property="og:site_name">
+
+    
+
+    
+      <meta content="Atomic 原理與線程安全" property="og:title">
+      <meta content="article" property="og:type">
+    
+
+    
+      <meta content="iOS development sharing, Swift, Objective-C" property="og:description">
+    
+
+    
+      <meta content="http://localhost:4000/ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html" property="og:url">
+    
+
+    
+      <meta content="2019-07-04T18:50:03+08:00" property="article:published_time">
+      <meta content="http://localhost:4000/about/" property="article:author">
+    
+
+    
+
+    
+      
+        <meta content="iOS" property="article:section">
+      
+    
+
+    
+      
+    
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@github.io">
+    <meta name="twitter:creator" content="@github.io">
+
+    
+      <meta name="twitter:title" content="Atomic 原理與線程安全">
+    
+
+    
+      <meta name="twitter:url" content="http://localhost:4000/ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html">
+    
+
+    
+      <meta name="twitter:description" content="iOS development sharing, Swift, Objective-C">
+    
+
+    
+
+    <!-- Font awesome icons -->
+    <link href="/static/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
+    <!-- syntax highlighting CSS -->
+    <link rel="stylesheet" href="/static/css/syntax.css">
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:400,300italic,300,400italic,700&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/super-search.css">
+    <link rel="stylesheet" href="/static/css/thickbox.css">
+    <link rel="stylesheet" href="/static/css/projects.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="col-sm-3">
+        <div class="fixed-condition">
+          <h1 class="author-name"><a href="/">Frank(wchuang)</a></h1>
+          
+            <div class="profile-about">
+              I'm Frank, an Sr. iOS Engineer, an ex-DiDier from Taiwan.
+            </div>
+          
+          <div class="social">
+            <ul>
+              
+                <li><a href="https://www.facebook.com/weicccc" target="_blank"><i class="fa fa-facebook"></i></a></li>
+              
+                <li><a href="https://twitter.com/huang_wc" target="_blank"><i class="fa fa-twitter"></i></a></li>
+              
+                <li><a href="https://www.linkedin.com/in/franklol/" target="_blank"><i class="fa fa-linkedin"></i></a></li>
+              
+                <li><a href="https://github.com/wchuang" target="_blank"><i class="fa fa-github"></i></a></li>
+              
+            </ul>
+          </div>
+          <div class="search" id="js-search">
+            <input type="text" placeholder="(sitemap)~$ type to search" class="search__input form-control" id="js-search__input">
+            <ul class="search__results" id="js-search__results"></ul>
+          </div>
+          <hr />
+          <ul class="sidebar-nav">
+            <strong>Navigation</strong>
+            <li><a href="/">Home</a></li>
+            
+              <li><a class="about" href="/about/">About Me</a></li>
+            
+              <li><a class="about" href="/feed.xml">XML Feed</a></li>
+            
+          </ul>
+        </div>
+        <!-- end /.fixed-condition -->
+      </div>
+      <div class="col-sm-8 col-offset-1 main-layout">
+        <header class="post-header">
+  <h1 class="post-title">Atomic 原理與線程安全</h1>
+</header>
+
+<span class="time">04 Jul 2019</span>
+
+  <span class="categories">
+    &raquo; <a href="/category/iOS">iOS</a>, <a href="/category/atomic">atomic</a>, <a href="/category/thread">thread</a>
+  </span>
+
+
+<div class="content">
+  <div class="post"><h2 id="寫在前面">寫在前面</h2>
+
+<p>這篇僅研究 iOS 中 <code class="language-plaintext highlighter-rouge">atomic</code> 屬性底層源碼實現與線程安全的關係。至於 atomic 的介紹以及與 nonatomic 的比較就不在這邊展開了。</p>
+
+<h2 id="atomic-能保證線程安全嗎">Atomic 能保證線程安全嗎？</h2>
+
+<p>首先，我們看下線程安全在 Wiki 的定義：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>執行緒安全是編程中的術語，指某個函數、函數庫在多執行緒環境中被調用時，
+能夠正確地處理多個執行緒之間的共享變量，使程序功能正確完成。 
+</code></pre></div></div>
+
+<p>也就是說，在你的程序中，若含有多個執行緒同時的執行某一段任務，在 A 執行緒執行完成後的結果不應該被 B 執行緒的結果所影響。這就可以被稱作是線程安全的，即能夠<strong>保證資料的一致性及完整性</strong>。</p>
+
+<p>在回答這個問題之前，我們先理解一下 atomic 在底層是怎麼實現的。</p>
+
+<h2 id="atomic-源碼實現">Atomic 源碼實現</h2>
+
+<p><strong>Set value</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if (!atomic) {
+    oldValue = *slot;
+    *slot = newValue;
+} else {
+    spinlock_t&amp; slotlock = PropertyLocks[slot];
+    slotlock.lock();
+    oldValue = *slot;
+    *slot = newValue;        
+    slotlock.unlock();
+}
+</code></pre></div></div>
+
+<p><strong>Get value</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>spinlock_t&amp; slotlock = PropertyLocks[slot];
+slotlock.lock();
+id value = objc_retain(*slot);
+slotlock.unlock();
+</code></pre></div></div>
+
+<p>在 Apple 官方開源的 objc4-750 裡面，可以發現在屬性在讀寫的時候，進行了 atomic 的判斷式，如果是 atomic 的屬性，會以該屬性的記憶體位置當作 key 值去底層維護的 mapping 表找出對應的 <code class="language-plaintext highlighter-rouge">spinlock</code>，並且加鎖，待完成任務後才解鎖。</p>
+
+<p>所以，我們知道了，<strong>atomic 會利用 spinlock 自旋鎖來確保讀寫過程中不被其他的執行緒篡改內容</strong>，算是線程安全。</p>
+
+<p>所以我寫了一個例子來測試是否如我們想的那樣呢。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dispatch_queue_t concurrent = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+
+    // Thread A
+    dispatch_async(concurrent, ^{
+        // Task A
+        NSLog(@"Enter Thread A");
+        for (int count = 0; count &lt; 100; count++) {
+            self.atomicStr = @"A";
+            self.nonAtomicStr = @"A";
+            if (![@"A" isEqualToString:_atomicStr]) {
+                NSLog(@"[Atomic] Task A's result is not expected. %@", _atomicStr);
+            }
+            if (![@"A" isEqualToString:_nonAtomicStr]) {
+                NSLog(@"[NonAtomic] Task A's result is not expected. %@", _nonAtomicStr);
+            }
+        }
+    });
+    
+    // Thread B
+    dispatch_async(concurrent, ^{
+        // Task B
+        NSLog(@"Enter Thread B");
+        for (int count = 0; count &lt; 100; count++) {
+            self.atomicStr = @"B";
+            self.nonAtomicStr = @"B";
+            if (![@"B" isEqualToString:_atomicStr]) {
+                NSLog(@"[Atomic] Task B's result is not expected. %@", _atomicStr);
+            }
+            if (![@"B" isEqualToString:_nonAtomicStr]) {
+                NSLog(@"[NonAtomic] Task B's result is not expected. %@", _nonAtomicStr);
+            }
+        }
+    });
+</code></pre></div></div>
+
+<p>這裡我開了兩個線程同時分別修改 <code class="language-plaintext highlighter-rouge">atomic</code> 及 <code class="language-plaintext highlighter-rouge">nonatomic</code> 字串。因為我們已經知道 atomic 在賦值的時候會加鎖，來保證當前線程下的任務不會被其他線程修改。所以，我們預期 Task A 每次賦值後的結果要為 A，Task B 需為 B。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Atomic[43745:2218609] Enter Thread A
+Atomic[43745:2218674] Enter Thread B
+Atomic[43745:2218609] [Atomic] Task A's result is not expected. B
+Atomic[43745:2218674] [NonAtomic] Task B's result is not expected. A
+Atomic[43745:2218674] Enter Thread A
+Atomic[43745:2218609] Enter Thread B
+Atomic[43745:2218674] [Atomic] Task A's result is not expected. B
+Atomic[43745:2218674] [NonAtomic] Task A's result is not expected. B
+</code></pre></div></div>
+
+<p>但卻出現這樣的結果。<strong>A 與 B 任務還是會互相影響。宣告 atomic 與 nonatomic 結果是一樣的</strong>。</p>
+
+<p>所以 atomic 不是線程安全嗎？</p>
+
+<p>這邊我的理解是，atomic 是安全的，但是它的職責只在於<strong>保證多執行緒下對同個屬性的讀寫不會同時進行</strong>。所以當 A 開始寫入，B 的寫入會進入等待，等到 A 一寫完鎖釋放後，B 馬上又鎖上進行寫的操作。這時候 A 的讀取又會進入等待，等到 B 寫完鎖釋放了之後，這時候在 Task A 裡面就會讀取到 B 的內容。反之，如果 A 的讀取快於 B 的寫入，那麼，A 讀取到的內容就會是預期的 A。至於<strong>執行緒的執行順序得看系統的調度了</strong>。</p>
+
+<h2 id="如何實現完整的線程安全">如何實現完整的線程安全？</h2>
+
+<p>其實就是確保單一任務或接口方法的原子性，讓某一執行緒在執行某段任務或某個方法的時候是唯一的。
+上述例子為了方便測試我加上了 <code class="language-plaintext highlighter-rouge">@synchronized</code> 鎖。這樣就是預期的結果了。</p>
+
+<p>如下：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// Thread A
+    dispatch_async(concurrent, ^{
+        // Task A
+        NSLog(@"Enter Thread A");
+        @synchronized (self) {
+            for (int count = 0; count &lt; 100; count++) {
+                self.atomicStr = @"A";
+                self.nonAtomicStr = @"A";
+                if (![@"A" isEqualToString:_atomicStr]) {
+                    NSLog(@"[Atomic] Task A's result is not expected. %@", _atomicStr);
+                }
+                if (![@"A" isEqualToString:_nonAtomicStr]) {
+                    NSLog(@"[NonAtomic] Task A's result is not expected. %@", _nonAtomicStr);
+                }
+            }
+        }
+    });
+</code></pre></div></div>
+
+<p>完整範例請看 -&gt; <a href="https://github.com/wchuang/devSwift/tree/master/Atomic">AtomicTest</a></p>
+
+<h2 id="結論">結論</h2>
+
+<p><strong>Atomic 是安全的，它保證了多執行緒下，讀和寫同時間的操作只能有一個，也就是資料的唯一性</strong>。只是它無法確保是哪個線程先執行，才造成了最後的結果不一致。所以，還需要對每個線程裡的任務做鎖的保護，確保最後的結果是預期完整的。</p>
+
+<p>Enjoy!</p>
+</div>
+  <div class="share-page">
+  <span style="float: left;">Share this on &rarr;&nbsp;&nbsp;</span>
+
+  <!-- Twitter -->
+  <a href="https://twitter.com/share" class="twitter-share-button" data-via="github.io">Tweet</a>
+  <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+
+  <!-- Facebook -->
+  <div class="fb-share-button" data-href="http://localhost:4000/ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
+</div>
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.6&appId=1749788565247320";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+</div>
+
+
+  
+    
+      
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+            
+            <div class="panel-body">
+              <h4>Related Posts</h4>
+              <ul>
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html">iOS 介面渲染及優化</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/Performance">Performance</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/swift/ios/2019/03/02/autoclosure-swift-apis.html">如何使用 @autoclosure 設計 Swift APIs</a>
+                  
+                    (Categories: <a href="/category/Swift">Swift</a>, <a href="/category/iOS">iOS</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/gcd/swift/ios/2018/11/04/swift-gcd.html">那些你很少用的 Swift GCD 方法</a>
+                  
+                    (Categories: <a href="/category/GCD">GCD</a>, <a href="/category/Swift">Swift</a>, <a href="/category/iOS">iOS</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html">PresentViewController delay on UITableViewCell</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/UIView">UIView</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/objective-c/2015/10/14/custom-nslog.html">Custom NSLog</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/Objective-C">Objective-C</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/ota/2015/04/08/distribute-an-ios-application-ota.html">Distribute an iOS application OTA</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/OTA">OTA</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+  
+  </ul>
+</div>
+
+
+<div class="PageNavigation">
+  
+    <a class="prev" href="/ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html">&laquo; iOS 介面渲染及優化</a>
+  
+  
+</div>
+
+<div class="disqus-comments">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+    /* <![CDATA[ */
+    var disqus_shortname = "";
+    var disqus_identifier = "http://localhost:4000_Atomic 原理與線程安全";
+    var disqus_title = "Atomic 原理與線程安全";
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    /* ]]> */
+  </script>
+</div>
+
+        <footer>
+          &copy; Frank(wchuang)
+          
+            - <a href="https://github.com/wchuang">https://github.com/wchuang</a> - Powered by Jekyll.
+          
+        </footer>
+      </div>
+      <!-- end /.col-sm-8 -->
+    </div>
+    <!-- end /.container -->
+
+    <!-- Bootstrap core JavaScript -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/js/super-search.js"></script>
+    <script src="/static/js/thickbox-compressed.js"></script>
+    <script src="/static/js/projects.js"></script>
+  </body>
+</html>
+

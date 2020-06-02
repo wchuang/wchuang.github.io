@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="/static/img/favicon.ico" />
+    <title>那些你很少用的 Swift GCD 方法 - Frank's blog - Developer, coffee lover and traveler</title>
+    <meta name="author" content="Frank(wchuang)" />
+    <meta name="description" content="那些你很少用的 Swift GCD 方法" />
+    <meta name="keywords" content="那些你很少用的 Swift GCD 方法, Frank's blog - Developer, coffee lover and traveler, GCD, Swift, iOS" />
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="/feed.xml">
+    <meta content="1749788565247320" property="fb:app_id">
+    <meta content="Frank's blog - Developer, coffee lover and traveler" property="og:site_name">
+
+    
+
+    
+      <meta content="那些你很少用的 Swift GCD 方法" property="og:title">
+      <meta content="article" property="og:type">
+    
+
+    
+      <meta content="iOS development sharing, Swift, Objective-C" property="og:description">
+    
+
+    
+      <meta content="http://localhost:4000/gcd/swift/ios/2018/11/04/swift-gcd.html" property="og:url">
+    
+
+    
+      <meta content="2018-11-04T15:03:08+08:00" property="article:published_time">
+      <meta content="http://localhost:4000/about/" property="article:author">
+    
+
+    
+
+    
+      
+        <meta content="GCD" property="article:section">
+      
+    
+
+    
+      
+    
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@github.io">
+    <meta name="twitter:creator" content="@github.io">
+
+    
+      <meta name="twitter:title" content="那些你很少用的 Swift GCD 方法">
+    
+
+    
+      <meta name="twitter:url" content="http://localhost:4000/gcd/swift/ios/2018/11/04/swift-gcd.html">
+    
+
+    
+      <meta name="twitter:description" content="iOS development sharing, Swift, Objective-C">
+    
+
+    
+
+    <!-- Font awesome icons -->
+    <link href="/static/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
+    <!-- syntax highlighting CSS -->
+    <link rel="stylesheet" href="/static/css/syntax.css">
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:400,300italic,300,400italic,700&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/super-search.css">
+    <link rel="stylesheet" href="/static/css/thickbox.css">
+    <link rel="stylesheet" href="/static/css/projects.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="col-sm-3">
+        <div class="fixed-condition">
+          <h1 class="author-name"><a href="/">Frank(wchuang)</a></h1>
+          
+            <div class="profile-about">
+              I'm Frank, an Sr. iOS Engineer, an ex-DiDier from Taiwan.
+            </div>
+          
+          <div class="social">
+            <ul>
+              
+                <li><a href="https://www.facebook.com/weicccc" target="_blank"><i class="fa fa-facebook"></i></a></li>
+              
+                <li><a href="https://twitter.com/huang_wc" target="_blank"><i class="fa fa-twitter"></i></a></li>
+              
+                <li><a href="https://www.linkedin.com/in/franklol/" target="_blank"><i class="fa fa-linkedin"></i></a></li>
+              
+                <li><a href="https://github.com/wchuang" target="_blank"><i class="fa fa-github"></i></a></li>
+              
+            </ul>
+          </div>
+          <div class="search" id="js-search">
+            <input type="text" placeholder="(sitemap)~$ type to search" class="search__input form-control" id="js-search__input">
+            <ul class="search__results" id="js-search__results"></ul>
+          </div>
+          <hr />
+          <ul class="sidebar-nav">
+            <strong>Navigation</strong>
+            <li><a href="/">Home</a></li>
+            
+              <li><a class="about" href="/about/">About Me</a></li>
+            
+              <li><a class="about" href="/feed.xml">XML Feed</a></li>
+            
+          </ul>
+        </div>
+        <!-- end /.fixed-condition -->
+      </div>
+      <div class="col-sm-8 col-offset-1 main-layout">
+        <header class="post-header">
+  <h1 class="post-title">那些你很少用的 Swift GCD 方法</h1>
+</header>
+
+<span class="time">04 Nov 2018</span>
+
+  <span class="categories">
+    &raquo; <a href="/category/GCD">GCD</a>, <a href="/category/Swift">Swift</a>, <a href="/category/iOS">iOS</a>
+  </span>
+
+
+<div class="content">
+  <div class="post"><p><a href="https://developer.apple.com/documentation/dispatch">Grand Central Dispatch</a> (GCD) 相信每個 iOS 開發者都不陌生，它是蘋果提供用來操作多執行緒的一種底層技術，你可以選擇在串行 (serial) 或並行 (concurrent) 的 queue 中執行同步 (synchronous) 或者非同步 (asynchronous) 的任務，這邊就不多說了，最常看到的方法就是：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>DispatchQueue.global().async {
+
+	// 耗時操作
+	
+	DispatchQueue.main.async {
+
+		// UI 更新 
+	}
+}
+</code></pre></div></div>
+
+<p>但除此之外，GCD 還有很多很少被使用但是令人驚豔的方法，這邊會介紹 4 種這類的方法，大家下次可以試著在專案中使用看看，相信會有很大的效果。</p>
+
+<h1 id="1-利用-dispatchworkitem-取消等待的任務">1. 利用 DispatchWorkItem 取消等待的任務</h1>
+
+<p>有些人對於 GCD 有一個 <strong>錯誤認知</strong>：</p>
+
+<blockquote>
+  <p>一旦排定了 GCD 任務就沒辦法被取消，只有 Operation 才可以。</p>
+</blockquote>
+
+<p>實際上在 iOS 8 及 macOS 10.10 之後可以使用 DispatchWorkItem 來做到。</p>
+
+<p>應用場景：</p>
+
+<p>假設我們有一個 search bar 讓使用者進行關鍵字搜尋，當收到關鍵字時會向後端 API 發送搜尋請求。但考量到使用者打字的速度，不可能每次輸入一個字就發出網路請求，這可能會造成不必要的網路流量以及伺服器負擔。所以我們可以偵測當使用者輸入閒置超過 0.25 秒後才發送一個請求。</p>
+
+<p>底下是一個例子，我們可以簡單的用 DispatchWorkItem，不用 Timer 或 Operation 的複雜操作。也可以直接用 closure 閉包注入 GCD 中，不需要 @objc 或是 #selector。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class SearchViewController: UIViewController, UISearchBarDelegate {
+
+	private var pendingRequestWorkItem: DispatchWorkItem?
+	
+	// MARK: - UISearchBarDelegate	
+	func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+		
+		// Cancel the pending work item
+		pendingRequestWorkItem?.cancel()
+		
+		// Build a request in a work item
+		let requestWorkItem = DispatchWorkItem { [weak self] in
+			self?.resultLoader.loadRequests(forQuery: searchText)
+		}
+		
+		// Save it and execute after 250ms
+		pendingRequestWorkItem = requestWorkItem
+		DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(250), 
+		                               execute: requestWorkItem)
+	}
+}
+
+</code></pre></div></div>
+
+<h1 id="2-利用-dispatchgroup-執行一系列的任務">2. 利用 DispatchGroup 執行一系列的任務</h1>
+
+<p>有時候我們希望可以做完一系列的任務 {A, B, C} 後，再做其他的任務 D。{ A, B, C } -&gt; D。例如：在建立 model 之前會有多個 API 的 request，待全部 response 回來後才組成需要的 model。</p>
+
+<p>這時候可以利用 DispatchGroup 來達成同步任務。我們只需要注意 <code class="language-plaintext highlighter-rouge">enter()</code> 以及 <code class="language-plaintext highlighter-rouge">leave()</code> 的呼叫是否一致。</p>
+
+<p>DispatchGroup 有另個好處可以開多個 DispatchGroup queue 異步的執行，而每個 queue 裡面的任務又可以同步完成。</p>
+
+<p>下面一個簡單的例子，從不同 datasource 取得資料，全部完成後存入 NoteCollection。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// Create a group to synchronize our tasks.
+let groip = DispatchGroup()
+
+// NoteCollection is a thread-safe collection class for storing notes.
+let collection = NoteCollection()
+
+// The 'enter	()' method increments the group's task count
+group.enter()
+localDataSource.load { notes in 
+	collection.add(notes)
+	// while the 'leave()' method decrements it
+	group.leave()
+}
+
+group.enter()
+iCloudDataSource.load { notes in 
+	collection.add(notes)
+	group.leave()
+}
+
+group.enter()
+backendDataSource.load { notes in 
+	collection.add(notes)
+	group.leave()
+}
+
+// This closure will be called when the group's task count reaches 0
+group.notify(queue: .main) { [weak self] in
+	self?.render(collection)
+}
+
+</code></pre></div></div>
+
+<p>上面的代碼重複的部份有點多，我們可以做一個 Array 的擴展來優化：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>extension Array where Element == DataSource {
+
+	func load(completion: @escaping (NoteCollection) -&gt; Void) {
+	
+		let group = DispatchGroup()
+		let collection = NoteCollection()
+		
+		for dataSource in self {
+		
+			group.enter()
+			dataSource.load { notes in
+			
+				collection.add(notes)
+				group.leave()
+			}
+		}
+		
+		group.notify(queue: .main) {
+		
+			completion(collection)
+		}
+	}
+}
+</code></pre></div></div>
+
+<p>基於以上擴展，我們可以這樣呼叫</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>let dataSources: [DataSource] = [
+	localDataSource,
+	iCouldDataSource,
+	backendDataSource
+]
+
+dataSources.load { [weak self] collection in
+
+	self?.render(collection)
+}
+</code></pre></div></div>
+
+<h1 id="3-利用-dispatchsemaphore-鎖住非同步的任務">3. 利用 DispatchSemaphore 鎖住非同步的任務</h1>
+
+<p>雖然 DispatchGroup 提供了同步的方法等待所有任務執行完成，但對於不同 DispatchGroup queue 來說，彼此還是异步的進行。DispatchSemaphore 可以鎖住某個 DispatchGroup queue 的執行，藉以達成同步的效果。</p>
+
+<p>跟 DispatchGroup 一樣，DispatchSemaphore API 也很簡單，也是利用 <code class="language-plaintext highlighter-rouge">signal()</code> 或 <code class="language-plaintext highlighter-rouge">wait()</code> 來增加或減少內部計數。在呼叫 <code class="language-plaintext highlighter-rouge">signal()</code> 前呼叫 <code class="language-plaintext highlighter-rouge">wait()</code> 會 block 目前的操作一直到 <code class="language-plaintext highlighter-rouge">signal()</code> 被呼叫。</p>
+
+<p>我們修改上面的例子，並另外建立一個 global queue 來加入 Semaphore 方法，因為呼叫 <code class="language-plaintext highlighter-rouge">wait()</code> 會 block 當前的 queue。成功返回 NoteCollection，失敗則丟出錯誤。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>extension Array where Element == DataSource {
+
+	func load() throws -&gt; NoteCollection {
+	
+		let semaphore = DispatchSemaphore(value: 0)
+		var loadedCollection: NoteCollection?
+		
+		let loadingQueue = DispatchQueue.global()
+		
+		loadingQueue.async {
+		
+			self.load(onQueue: loadingQueue) { collection in
+			
+				loadedCollection = collection
+				
+				// Unblock
+				semaphore.signal()
+			}
+		}
+		
+		// Block and wait
+		semaphore.wait(timeout: .noew() + 5)
+		
+		guare let collection = loadedCollection else {
+		
+			throw NoteLoadingError.timeout
+		}
+	
+		return collection
+	}
+}
+
+</code></pre></div></div>
+
+<p>同步的呼叫方式</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>let dataSource: [DataSource] = [
+	localDataSource,
+	iCloudDataSource,
+	backendDataSource
+]
+
+do {
+	let collection = try dataSource.load()
+	output(collection)
+} catch {
+	output(error)
+}
+
+</code></pre></div></div>
+
+<h1 id="4-利用-dispatchsource-監聽檔案是否被修改">4. 利用 DispatchSource 監聽檔案是否被修改</h1>
+
+<p>這個鮮為人知的方法可以讓我們監控檔案是否被修改過，<code class="language-plaintext highlighter-rouge">在線編輯</code>的功能就可以利用這個方式實作出來。</p>
+
+<p><code class="language-plaintext highlighter-rouge">DispatchSource</code> 可以有很多種來源，例如：Timer source, User data, file system or memory pressure event，這裡我們用 file system 示範。直接看 code 吧。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class FileObserver {
+
+	private let file: File
+	private let queue: DispatchQueue
+	private var source: DispatchSourceFileSystemObject?
+	
+	init(file: File) {
+	
+		self.file = file
+		self.queue = DispatchQueue(label: "com.test.fileobserver")
+	}
+	
+	func start(closure: @escaping() -&gt; Void) {
+		
+		let path = (file.path as NSString)
+		let fileSystemRepresentation = path.fileSystemRepresentation
+		
+		let fileDescriptor = open(fileSystemRepresentation, O_EVTONLY)
+		
+		let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fileDescriptor, eventMask: .write, queue: queue)
+		
+		source.setEventHandler(handler: closure)
+		source.resume()
+		
+		self.source = source
+	}
+}
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>let observer = try FileObserver(file: file)
+
+observer.start {
+	print("File was changed")
+}
+</code></pre></div></div>
+
+<p>總結下來，GCD 還是挺厲害的也埋藏了一些好用的功能，比起利用 NSTimer 或者 Operation 可能會產生的問題小很多，也更安全一些！各位看倌可以多多挖掘 GCD 的應用場景。Happy Coding!</p>
+
+<h3 id="reference">Reference</h3>
+<ul>
+  <li><a href="https://www.swiftbysundell.com/posts/a-deep-dive-into-grand-central-dispatch-in-swift">A deep dive into Grand Central Dispatch in Swift</a></li>
+</ul>
+</div>
+  <div class="share-page">
+  <span style="float: left;">Share this on &rarr;&nbsp;&nbsp;</span>
+
+  <!-- Twitter -->
+  <a href="https://twitter.com/share" class="twitter-share-button" data-via="github.io">Tweet</a>
+  <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+
+  <!-- Facebook -->
+  <div class="fb-share-button" data-href="http://localhost:4000/gcd/swift/ios/2018/11/04/swift-gcd.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
+</div>
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.6&appId=1749788565247320";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+</div>
+
+
+  
+    
+      
+        
+          
+      
+          
+      
+          
+            
+            <div class="panel-body">
+              <h4>Related Posts</h4>
+              <ul>
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html">Atomic 原理與線程安全</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/atomic">atomic</a>, <a href="/category/thread">thread</a>)
+                  
+                </li>
+          
+          
+        
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html">iOS 介面渲染及優化</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/Performance">Performance</a>)
+                  
+                </li>
+          
+          
+        
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/swift/ios/2019/03/02/autoclosure-swift-apis.html">如何使用 @autoclosure 設計 Swift APIs</a>
+                  
+                    (Categories: <a href="/category/Swift">Swift</a>, <a href="/category/iOS">iOS</a>)
+                  
+                </li>
+          
+          
+        
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html">PresentViewController delay on UITableViewCell</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/UIView">UIView</a>)
+                  
+                </li>
+          
+          
+        
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/objective-c/2015/10/14/custom-nslog.html">Custom NSLog</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/Objective-C">Objective-C</a>)
+                  
+                </li>
+          
+          
+        
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+            
+                <li class="relatedPost">
+                  <a href="http://localhost:4000/ios/ota/2015/04/08/distribute-an-ios-application-ota.html">Distribute an iOS application OTA</a>
+                  
+                    (Categories: <a href="/category/iOS">iOS</a>, <a href="/category/OTA">OTA</a>)
+                  
+                </li>
+          
+          
+        
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+    
+      
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+        
+          
+      
+          
+      
+          
+      
+    
+  
+  
+  </ul>
+</div>
+
+
+<div class="PageNavigation">
+  
+    <a class="prev" href="/mmap/2018/06/18/what-is-mmap-and-how-it-works.html">&laquo; What Is Mmap and How It Works?</a>
+  
+  
+    <a class="next" href="/swift/ios/2019/03/02/autoclosure-swift-apis.html">如何使用 @autoclosure 設計 Swift APIs &raquo;</a>
+  
+</div>
+
+<div class="disqus-comments">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+    /* <![CDATA[ */
+    var disqus_shortname = "";
+    var disqus_identifier = "http://localhost:4000_那些你很少用的 Swift GCD 方法";
+    var disqus_title = "那些你很少用的 Swift GCD 方法";
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    /* ]]> */
+  </script>
+</div>
+
+        <footer>
+          &copy; Frank(wchuang)
+          
+            - <a href="https://github.com/wchuang">https://github.com/wchuang</a> - Powered by Jekyll.
+          
+        </footer>
+      </div>
+      <!-- end /.col-sm-8 -->
+    </div>
+    <!-- end /.container -->
+
+    <!-- Bootstrap core JavaScript -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/js/super-search.js"></script>
+    <script src="/static/js/thickbox-compressed.js"></script>
+    <script src="/static/js/projects.js"></script>
+  </body>
+</html>
+

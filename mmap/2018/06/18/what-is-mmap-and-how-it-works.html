@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="/static/img/favicon.ico" />
+    <title>What Is Mmap and How It Works? - Frank's blog - Developer, coffee lover and traveler</title>
+    <meta name="author" content="Frank(wchuang)" />
+    <meta name="description" content="What Is Mmap and How It Works?" />
+    <meta name="keywords" content="What Is Mmap and How It Works?, Frank's blog - Developer, coffee lover and traveler, Mmap" />
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="/feed.xml">
+    <meta content="1749788565247320" property="fb:app_id">
+    <meta content="Frank's blog - Developer, coffee lover and traveler" property="og:site_name">
+
+    
+
+    
+      <meta content="What Is Mmap and How It Works?" property="og:title">
+      <meta content="article" property="og:type">
+    
+
+    
+      <meta content="iOS development sharing, Swift, Objective-C" property="og:description">
+    
+
+    
+      <meta content="http://localhost:4000/mmap/2018/06/18/what-is-mmap-and-how-it-works.html" property="og:url">
+    
+
+    
+      <meta content="2018-06-18T17:17:35+08:00" property="article:published_time">
+      <meta content="http://localhost:4000/about/" property="article:author">
+    
+
+    
+
+    
+      
+        <meta content="Mmap" property="article:section">
+      
+    
+
+    
+      
+    
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@github.io">
+    <meta name="twitter:creator" content="@github.io">
+
+    
+      <meta name="twitter:title" content="What Is Mmap and How It Works?">
+    
+
+    
+      <meta name="twitter:url" content="http://localhost:4000/mmap/2018/06/18/what-is-mmap-and-how-it-works.html">
+    
+
+    
+      <meta name="twitter:description" content="iOS development sharing, Swift, Objective-C">
+    
+
+    
+
+    <!-- Font awesome icons -->
+    <link href="/static/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
+    <!-- syntax highlighting CSS -->
+    <link rel="stylesheet" href="/static/css/syntax.css">
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:400,300italic,300,400italic,700&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/super-search.css">
+    <link rel="stylesheet" href="/static/css/thickbox.css">
+    <link rel="stylesheet" href="/static/css/projects.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="col-sm-3">
+        <div class="fixed-condition">
+          <h1 class="author-name"><a href="/">Frank(wchuang)</a></h1>
+          
+            <div class="profile-about">
+              I'm Frank, an Sr. iOS Engineer, an ex-DiDier from Taiwan.
+            </div>
+          
+          <div class="social">
+            <ul>
+              
+                <li><a href="https://www.facebook.com/weicccc" target="_blank"><i class="fa fa-facebook"></i></a></li>
+              
+                <li><a href="https://twitter.com/huang_wc" target="_blank"><i class="fa fa-twitter"></i></a></li>
+              
+                <li><a href="https://www.linkedin.com/in/franklol/" target="_blank"><i class="fa fa-linkedin"></i></a></li>
+              
+                <li><a href="https://github.com/wchuang" target="_blank"><i class="fa fa-github"></i></a></li>
+              
+            </ul>
+          </div>
+          <div class="search" id="js-search">
+            <input type="text" placeholder="(sitemap)~$ type to search" class="search__input form-control" id="js-search__input">
+            <ul class="search__results" id="js-search__results"></ul>
+          </div>
+          <hr />
+          <ul class="sidebar-nav">
+            <strong>Navigation</strong>
+            <li><a href="/">Home</a></li>
+            
+              <li><a class="about" href="/about/">About Me</a></li>
+            
+              <li><a class="about" href="/feed.xml">XML Feed</a></li>
+            
+          </ul>
+        </div>
+        <!-- end /.fixed-condition -->
+      </div>
+      <div class="col-sm-8 col-offset-1 main-layout">
+        <header class="post-header">
+  <h1 class="post-title">What Is Mmap and How It Works?</h1>
+</header>
+
+<span class="time">18 Jun 2018</span>
+
+  <span class="categories">
+    &raquo; <a href="/category/Mmap">Mmap</a>
+  </span>
+
+
+<div class="content">
+  <div class="post"><h1 id="前言">前言</h1>
+
+<p>MMAP(Memory-mapped file), 是一種源於 Unix/Linux 作業系統內存映射文件的方法，主要用於<strong>增加 I/O 存取效能</strong>，尤其大文件效果更顯著。它在進程 process 中開闢一段<strong><a href="https://zh.wikipedia.org/wiki/%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98">虛擬內存</a></strong><em>逐一字節的將一份文件或檔案從磁碟位置對應到該虛擬位置</em>，這樣使得 process 可以直接操作該虛擬內存，如同操作該文件，而不需要調用 read/write 等系統方法。同時也減少了一次從文件拷貝的動作。</p>
+
+<h1 id="原理">原理</h1>
+
+<p>mmap 實現原理主要分為三個階段：</p>
+
+<ol>
+  <li>
+    <p>Start MMAP in process, creating a virtual mapping zone on virtual address space:</p>
+
+    <ul>
+      <li>
+        <p>Process request a <code class="language-plaintext highlighter-rouge">mmap</code> system fuction in user-space:</p>
+
+        <p><code class="language-plaintext highlighter-rouge">void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset);</code></p>
+      </li>
+      <li>
+        <p>Seek a continuous and idle virtual address space in vitual memory address of current process.</p>
+      </li>
+      <li>
+        <p>Allocate a <code class="language-plaintext highlighter-rouge">vm_area_struct</code> struct for this virtual address space, and initialize the struct.</p>
+      </li>
+      <li>
+        <p>Insert the struct to linked list or tree of virtual address space of process.</p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>Request a <code class="language-plaintext highlighter-rouge">mmap</code> system fuction in kernal-space, not in user-space, and implement the mapping relationship between the disk address of file and virtual address space of current process:</p>
+
+    <ul>
+      <li>
+        <p>After allocating a new virtual address space, it will find the file descriptor in file descriptor table by the pointer of un-mapped files. And link to the struct file of every un-mapped file through the file descriptor in kernal’s opened file set. Every struct file will maintain a opened file in kernal one by one.</p>
+      </li>
+      <li>
+        <p>Link to module of <code class="language-plaintext highlighter-rouge">file_operations</code> through the struct file and request function of <code class="language-plaintext highlighter-rouge">mmap</code> in kernal-space, not in user-space:</p>
+
+        <p><code class="language-plaintext highlighter-rouge">int mmap(struct file *filp, struct vm_area_struct *vma)</code></p>
+      </li>
+      <li>
+        <p><code class="language-plaintext highlighter-rouge">mmap</code> function in kernal will locate the file physical address in disk by <code class="language-plaintext highlighter-rouge">inode</code> module.</p>
+      </li>
+      <li>
+        <p>Build a mapping relationship table between the disk address of file and virtual address space of current process. However, there is no data mapping in main memory from virtual address space.</p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>Process start to read data on this virtual address space, that will occur <a href="https://zh.wikipedia.org/wiki/%E9%A1%B5%E7%BC%BA%E5%A4%B1"><code class="language-plaintext highlighter-rouge">Page Fault</code></a> and start copy document data from disk to main memory: (<strong>In step 1 and 2, there is only create virtual address space and compelte the mapping relationshop table, but the data do not copy into main memory yet. When starting read/write operations on process, just start to copy data.</strong>)</p>
+
+    <ul>
+      <li>
+        <p>When process start to read or write data on mapping address on virtual address space, it find that it is not found on memory page. Due to there is only build a mapping and the file data is not copy to memory, so it occurs <code class="language-plaintext highlighter-rouge">Page Fault</code>.</p>
+      </li>
+      <li>
+        <p>Kernal request a page fault handler after confirming there are no illegal operations.</p>
+      </li>
+      <li>
+        <p>Seek to the memory page in <code class="language-plaintext highlighter-rouge">swap cache</code>, if not find, it will request <code class="language-plaintext highlighter-rouge">nopage</code> function in order to create page from disk to main memory.</p>
+      </li>
+      <li>
+        <p>Then the process can do read/write operations on main memory, if the data be changed, system will update those changed content in mapped disk address after a while. (You can use <code class="language-plaintext highlighter-rouge">msync</code> function to update data right now.)</p>
+      </li>
+    </ul>
+  </li>
+</ol>
+
+<h1 id="函數介紹">函數介紹</h1>
+
+<p><code class="language-plaintext highlighter-rouge">void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset);</code></p>
+
+<h5 id="參數">參數</h5>
+
+<ul>
+  <li>
+    <p>start: mapping virtual address space 的開始位置，如果傳入 NULL，kernal 會自動選擇 page-aligned address。</p>
+  </li>
+  <li>
+    <p>length: mapping space 長度。</p>
+  </li>
+  <li>
+    <p>prot: 內存保護機制。</p>
+
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  PROT_EXEC  Pages may be executed.
+  PROT_READ  Pages may be read.
+  PROT_WRITE Pages may be written.
+  PROT_NONE  Pages may not be accessed.
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>flags: 是否該映射區可以被其他 processes 看到。</p>
+
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  MAP_SHARED Share this mapping.
+  MAP_SHARED_VALIDATE This flag provides the same behavior as MAP_SHARED except that MAP_SHARED mappings ignore unknown flags in flags.
+  MAP_PRIVATE Create a private copy-on-write mapping.
+  MAP_32BIT Put the mapping into the first 2 Gigabytes of the process address space. 
+  MAP_ANON Synonym for MAP_ANONYMOUS. Deprecated.
+  ...    
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>fd: 文件描述詞。</p>
+  </li>
+  <li>
+    <p>offset: 文件位移量。</p>
+  </li>
+</ul>
+
+<h5 id="返回值">返回值</h5>
+
+<p>如果建立成功，會返回一個指標指向這個映射空間的位置。假設失敗，將會回傳 <code class="language-plaintext highlighter-rouge">MAP_FAILED (that is, (void *) -1)</code>，以及 <code class="language-plaintext highlighter-rouge">errno</code>。</p>
+
+<h1 id="與一般文件存取差異">與一般文件存取差異</h1>
+
+<p>一般文件調用過程：</p>
+
+<ol>
+  <li>Process 發起讀取文件請求。</li>
+  <li>Kernal 通過尋找 file descriptor in file descriptor table，並且利用 kernal 中已開啟的文件集中的文件資訊找到該文件的 <code class="language-plaintext highlighter-rouge">inode</code>。</li>
+  <li>判斷該文件是否在<a href="https://en.wikipedia.org/wiki/Page_cache">頁緩存 page cache</a> 中，如果存在則返回該文件內容。不存在則利用 <code class="language-plaintext highlighter-rouge">inode</code> 定位到 physical address in disk，並拷貝文件內容到頁緩存中。之後再發起讀頁面請求，將頁緩存的資訊給該 process。</li>
+</ol>
+
+<p>總而言之，一般文件讀取為了提高效率及保護磁碟，會利用頁緩存技術。這樣造成讀文件的時候，需要先將文件從磁碟拷貝到頁緩存，但由於頁緩存在 kernal-space 中，不能被 user-space 訪問，所以必須將資料從頁緩存再拷貝到 user-space。<strong>這樣進行了兩次的資料拷貝</strong>。</p>
+
+<p>而使用 mmap，利用建立新的 virtual address space 以及磁碟位置與 virtual address space 的映射，沒有進行文件拷貝。直到訪問資料時造成 <code class="language-plaintext highlighter-rouge">Page Fault</code> 利用映射關係，<strong>只進行一次的資料拷貝</strong>，就從磁碟拷貝至 user-space，讓 process 得以使用。</p>
+
+<h1 id="優點">優點</h1>
+
+<ol>
+  <li>對文件存取繞過了 paging 技術操作，減少了資料的拷貝次數，並且利用 read/write in memory instead of I/O operations，大大提高效能。</li>
+  <li>內存映射文件可以只載入一部分內容到用戶空間，對於大型檔案非常有用。</li>
+  <li>實現了 user-space 及 kernal-space 的交互，兩空間的修改可以直接反映在映射區，並且被對方更新。</li>
+  <li>可以達到跨 process 溝通通信。</li>
+  <li>避免因為大量的 data I/O 造成的記憶體不足問題，</li>
+</ol>
+
+<h1 id="如何確保不會讀到其他位址">如何確保不會讀到其他位址</h1>
+
+<p>MMAP 是利用自己的虛擬位址空間來處理 (必須先映射，否則無法透過 user-space 的虛擬記憶體存取)。所以其他 user-space 中的行程是沒辦法去存取這塊記憶體。因為其這塊超出的記憶體位址並沒有映射到它自己的虛擬記憶體位址，也因此當 user-space 存取超出的話，就會被作業系統踢出。</p>
+
+<h1 id="參考資料">參考資料</h1>
+<ul>
+  <li><a href="https://zh.wikipedia.org/wiki/%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84%E6%96%87%E4%BB%B6">Wiki</a></li>
+  <li><a href="http://www.cnblogs.com/huxiao-tee/p/4660352.html">mmap分析</a></li>
+  <li><a href="http://man7.org/linux/man-pages/man2/mmap.2.html">mmap函數說明</a></li>
+</ul>
+
+</div>
+  <div class="share-page">
+  <span style="float: left;">Share this on &rarr;&nbsp;&nbsp;</span>
+
+  <!-- Twitter -->
+  <a href="https://twitter.com/share" class="twitter-share-button" data-via="github.io">Tweet</a>
+  <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+
+  <!-- Facebook -->
+  <div class="fb-share-button" data-href="http://localhost:4000/mmap/2018/06/18/what-is-mmap-and-how-it-works.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
+</div>
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.6&appId=1749788565247320";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+</div>
+
+
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+  
+    
+      
+        
+          
+      
+    
+        
+          
+      
+    
+        
+          
+      
+    
+  
+  
+
+<div class="PageNavigation">
+  
+    <a class="prev" href="/cocoapods/2018/04/15/how-to-make-a-private-cocoapods.html">&laquo; How to Make a Private CocoaPods?</a>
+  
+  
+    <a class="next" href="/gcd/swift/ios/2018/11/04/swift-gcd.html">那些你很少用的 Swift GCD 方法 &raquo;</a>
+  
+</div>
+
+<div class="disqus-comments">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+    /* <![CDATA[ */
+    var disqus_shortname = "";
+    var disqus_identifier = "http://localhost:4000_What Is Mmap and How It Works?";
+    var disqus_title = "What Is Mmap and How It Works?";
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    /* ]]> */
+  </script>
+</div>
+
+        <footer>
+          &copy; Frank(wchuang)
+          
+            - <a href="https://github.com/wchuang">https://github.com/wchuang</a> - Powered by Jekyll.
+          
+        </footer>
+      </div>
+      <!-- end /.col-sm-8 -->
+    </div>
+    <!-- end /.container -->
+
+    <!-- Bootstrap core JavaScript -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/js/super-search.js"></script>
+    <script src="/static/js/thickbox-compressed.js"></script>
+    <script src="/static/js/projects.js"></script>
+  </body>
+</html>
+
