@@ -1,6 +1,6 @@
 ---
 layout: posts_by_category
-categories: Objective-C
+categories: objective-c
 title: Objective-C
 permalink: /category/objective-c
 ---

@@ -1,6 +1,6 @@
 ---
 layout: posts_by_category
-categories: OTA
+categories: ota
 title: OTA
 permalink: /category/ota
 ---

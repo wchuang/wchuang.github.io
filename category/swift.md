@@ -1,6 +1,6 @@
 ---
 layout: posts_by_category
-categories: Swift
+categories: swift
 title: Swift
 permalink: /category/swift
 ---

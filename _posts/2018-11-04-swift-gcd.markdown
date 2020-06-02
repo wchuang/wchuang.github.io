@@ -2,7 +2,7 @@
 layout: post
 title: 那些你很少用的 Swift GCD 方法
 date: 2018-11-04T15:03:08+08:00
-categories: [GCD, Swift, iOS]
+categories: [gcd, swift, ios]
 keywords: "Swift, GCD, iOS"
 ---
 

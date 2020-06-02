@@ -2,7 +2,7 @@
 layout: post
 title: "[UIView viewWithTag:]"
 date: 2014-11-11 01:46:01 +0800
-categories: [UIView, Objective-C, iOS]
+categories: [uiview, objective-c, ios]
 keywords: "viewWithTag, UIView, Objectice-C, iOS, UIKit"
 description: "[UIView viewWithTag:] 觀念"
 ---

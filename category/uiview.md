@@ -1,6 +1,6 @@
 ---
 layout: posts_by_category
-categories: UIView
+categories: uiview
 title: UIView
 permalink: /category/uiview
 ---

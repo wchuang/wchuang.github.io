@@ -1,6 +1,6 @@
 ---
 layout: posts_by_category
-categories: Mmap
+categories: mmap
 title: Mmap
 permalink: /category/mmap
 ---

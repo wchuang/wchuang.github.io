@@ -2,7 +2,7 @@
 layout: post
 title: "Custom NSLog"
 date: 2015-10-14 01:21:14 +0800
-categories: [iOS, Objective-C]
+categories: [ios, objective-c]
 keywords: "iOS, NSLog, obj-c, objective-c"
 description: "custom NSLog-like macro"
 ---

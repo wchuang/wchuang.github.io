@@ -1,6 +1,6 @@
 ---
 layout: posts_by_category
-categories: Cocoapods
+categories: cocoapods
 title: Cocoapods
 permalink: /category/cocoapods
 ---

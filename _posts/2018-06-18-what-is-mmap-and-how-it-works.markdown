@@ -2,7 +2,7 @@
 layout: post
 title: "What Is Mmap and How It Works?"
 date: 2018-06-18T17:17:35+08:00
-categories: [Mmap]
+categories: [mmap]
 ---
 
 # 前言 #

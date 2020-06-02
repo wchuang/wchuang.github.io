@@ -3,7 +3,7 @@ layout: post
 title: "iOS 介面渲染及優化"
 date: 2019-06-24T23:56:57+08:00
 comments: true
-categories: [iOS, performance]
+categories: [ios, performance]
 keywords: "iOS, ui rendering, off-screen, on-screen, framebuffer"
 ---
 

@@ -1,6 +1,6 @@
 ---
 layout: posts_by_category
-categories: iOS
+categories: ios
 title: iOS
 permalink: /category/ios
 ---

@@ -2,7 +2,7 @@
 layout: post
 title: "Distribute an iOS application OTA"
 date: 2015-04-08 00:53:56 +0800
-categories: [iOS, OTA]
+categories: [ios, ota]
 keywords: "iOS, OTA, AdHoc, distribute"
 description: "建立可給外部使用者測試的 AdHoc iOS app OTA"
 ---
