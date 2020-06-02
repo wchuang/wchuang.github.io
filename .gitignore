@@ -5,3 +5,4 @@ _site
 bin
 .bundle
 .deploy
+.DS_Store

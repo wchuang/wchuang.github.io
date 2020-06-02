@@ -3,7 +3,7 @@ layout: post
 title: "如何使用 @autoclosure 設計 Swift APIs"
 date: 2019-03-02T16:31:08+08:00
 comments: true
-categories: "aotuclosure, Swift, iOS"
+categories: [Swift, iOS]
 keywords: "aotuclosure, Swift, iOS"
 ---
 

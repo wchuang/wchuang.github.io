@@ -2,7 +2,7 @@
 layout: post
 title: "Atomic 原理與線程安全"
 date: 2019-07-04T18:50:03+08:00
-categories: "iOS, atomic, property, thread, safe"
+categories: [iOS, atomic, thread]
 keywords: "iOS, atomic, property, thread-safe"
 ---
 

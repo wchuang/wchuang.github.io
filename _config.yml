@@ -1,29 +1,56 @@
 # Site settings
 title: Frank's blog - Developer, coffee lover and traveler
-email: ijamhh@gmail.com
+description: iOS development sharing, Swift, Objective-C
+author: Frank(wchuang)
+github: https://github.com/wchuang
+about: I'm Frank, an Sr. iOS Engineer, an ex-DiDier from Taiwan.
 
-description: > # this means to ignore newlines until "baseurl:"
-  My name is Frank, an iOS developer from Taiwan.
-  Currently, I work at Didi Chuxing(DiDi) and live in Beijing, China.
+#google_analytics: UA-XXXXXXXX-Y
 
-baseurl: "" # the subpath of your site, e.g. /blog/
-url: "http://blog.wchuang.me" # the base hostname & protocol for your site
+enableTags: true
+tagarray: []
 
-twitter_username: huang_wc
-github_username: wchuang
-linkedin_username: franklol
+collections:
+  project:
+    output: true
+    permalink: /project/:path/
 
-# Build settings
+social:
+    - icon: fa-facebook
+      link: "https://www.facebook.com/weicccc"
+    - icon: fa-twitter
+      link: "https://twitter.com/huang_wc"
+    - icon: fa-linkedin
+      link: "https://www.linkedin.com/in/franklol/"
+    - icon: fa-github
+      link: "https://github.com/wchuang"
+
+share:
+  twitter_username: github.io
+  fb_appid: 1749788565247320
+
+urls:
+    - text: About Me
+      url: /about/
+#    - text: My Projects
+#      url: /projects/
+    - text: XML Feed
+      url: /feed.xml
+
+url: "https://blog.wchuang.cc/"
+baseurl: ""
+paginate: 20
+per_page: 20
+paginate_path: "/page/:num/"
 markdown: kramdown
-encoding: UTF-8
+#encoding: UTF-8
+plugins:
+  - jekyll-paginate
+  - jekyll-gist
 
-permalink: /:year/:month/:day/:title/
-
-gems: 
-  - octopress-image-tag
-  - octopress-video-tag
-  - octopress-codeblock
-  - octopress-quote-tag
-  - octopress-codefence
-  - octopress-solarized
-  - octopress-gist
+compress_html:
+  clippings: all
+  comments: ["<!-- ", " -->"]
+  endings: all
+  ignore:
+    envs: ['development']

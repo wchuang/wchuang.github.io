@@ -2,8 +2,7 @@
 layout: post
 title: "PresentViewController delay on UITableViewCell"
 date: 2015-11-22 02:36:24 +0800
-comments: true
-categories: "iOS UITableView UITableViewCell"
+categories: [iOS, UIView]
 keywords: "iOS, UITableView, UITableViewCell, presentViewController"
 description: "presenting view controller delay on UITableViewCell"
 ---
