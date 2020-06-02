@@ -5,8 +5,8 @@
     <description>iOS development sharing, Swift, Objective-C</description>
     <link>http://localhost:4000/</link>
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 03 Jun 2020 02:11:22 +0800</pubDate>
-    <lastBuildDate>Wed, 03 Jun 2020 02:11:22 +0800</lastBuildDate>
+    <pubDate>Wed, 03 Jun 2020 02:17:41 +0800</pubDate>
+    <lastBuildDate>Wed, 03 Jun 2020 02:17:41 +0800</lastBuildDate>
     <generator>Jekyll v3.8.7</generator>
     
       <item>
@@ -149,7 +149,7 @@ Atomic[43745:2218674] [NonAtomic] Task A's result is not expected. B
         <guid isPermaLink="true">http://localhost:4000/ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html</guid>
         
         
-        <category>iOS</category>
+        <category>ios</category>
         
         <category>atomic</category>
         
@@ -389,7 +389,7 @@ that can be displayed on a computer monitor.
         <guid isPermaLink="true">http://localhost:4000/ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html</guid>
         
         
-        <category>iOS</category>
+        <category>ios</category>
         
         <category>performance</category>
         
@@ -507,9 +507,9 @@ that can be displayed on a computer monitor.
         <guid isPermaLink="true">http://localhost:4000/swift/ios/2019/03/02/autoclosure-swift-apis.html</guid>
         
         
-        <category>Swift</category>
+        <category>swift</category>
         
-        <category>iOS</category>
+        <category>ios</category>
         
       </item>
     
@@ -767,11 +767,11 @@ observer.start {
         <guid isPermaLink="true">http://localhost:4000/gcd/swift/ios/2018/11/04/swift-gcd.html</guid>
         
         
-        <category>GCD</category>
+        <category>gcd</category>
         
-        <category>Swift</category>
+        <category>swift</category>
         
-        <category>iOS</category>
+        <category>ios</category>
         
       </item>
     
@@ -932,7 +932,7 @@ observer.start {
         <guid isPermaLink="true">http://localhost:4000/mmap/2018/06/18/what-is-mmap-and-how-it-works.html</guid>
         
         
-        <category>Mmap</category>
+        <category>mmap</category>
         
       </item>
     
@@ -1095,7 +1095,7 @@ git push --tags
         <guid isPermaLink="true">http://localhost:4000/cocoapods/2018/04/15/how-to-make-a-private-cocoapods.html</guid>
         
         
-        <category>Cocoapods</category>
+        <category>cocoapods</category>
         
       </item>
     
@@ -1122,9 +1122,9 @@ git push --tags
         <guid isPermaLink="true">http://localhost:4000/ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html</guid>
         
         
-        <category>iOS</category>
+        <category>ios</category>
         
-        <category>UIView</category>
+        <category>uiview</category>
         
       </item>
     
@@ -1160,9 +1160,9 @@ git push --tags
         <guid isPermaLink="true">http://localhost:4000/ios/objective-c/2015/10/14/custom-nslog.html</guid>
         
         
-        <category>iOS</category>
+        <category>ios</category>
         
-        <category>Objective-C</category>
+        <category>objective-c</category>
         
       </item>
     
@@ -1202,9 +1202,9 @@ git push --tags
         <guid isPermaLink="true">http://localhost:4000/ios/ota/2015/04/08/distribute-an-ios-application-ota.html</guid>
         
         
-        <category>iOS</category>
+        <category>ios</category>
         
-        <category>OTA</category>
+        <category>ota</category>
         
       </item>
     
@@ -1319,11 +1319,11 @@ git push --tags
         <guid isPermaLink="true">http://localhost:4000/uiview/objective-c/ios/2014/11/11/uiview-viewwithtag.html</guid>
         
         
-        <category>UIView</category>
+        <category>uiview</category>
         
-        <category>Objective-C</category>
+        <category>objective-c</category>
         
-        <category>iOS</category>
+        <category>ios</category>
         
       </item>
     
