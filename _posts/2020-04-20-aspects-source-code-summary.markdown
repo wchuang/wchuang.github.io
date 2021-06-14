@@ -760,59 +760,48 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
 		先利用關聯對象拿到 AspectsContainer，移除 aspect（AspectIdentifier）以及 AspectsContainer 的關係。
 		
 		aspect_cleanupHookedClassAndSelector 清除之前 hook 的類以及 selector。
-		
+		並清除 aspect 相關信息。
+
 		```
 		aspect.object = nil;
-      	aspect.block = nil;
-      	aspect.selector = NULL;
-      	```
-      	
-      	清除 aspect 相關信息。
+		aspect.block = nil;
+		aspect.selector = NULL;
+		```
+	* `aspect_cleanupHookedClassAndSelector` 這個方法也是精華所在
 
-	* aspect_cleanupHookedClassAndSelector 這個方法也是精華所在
-  		
-  		```
-  		Class klass = object_getClass(self);
+		```
+		Class klass = object_getClass(self);
 	   	BOOL isMetaClass = class_isMetaClass(klass);
-	    if (isMetaClass) {
-	        klass = (Class)self;
+	   	
+		if (isMetaClass) {
+		    klass = (Class)self;
 	    }
-  		```
+		```
+		先拿到類的 isa 指針，如果指向的就是元類，則用自己，如果還不是元類，則用 isa 指針指向的類。然後拿到的類的方法實現位置，把之前交換的 aspect alias 後的 selector 與原本的 selector 交換回來。
+		
+		```
+		Method targetMethod = class_getInstanceMethod(klass, selector);
+	   IMP targetMethodIMP = method_getImplementation(targetMethod);
+  		if (aspect_isMsgForwardIMP(targetMethodIMP)) {
   		
-  		先拿到類的 isa 指針，如果指向的就是元類，則用自己，如果還不是元類，則用 isa 指針指向的類。
-  		
-  		然後拿到的類的方法實現位置，把之前交換的 aspect alias 後的 selector 與原本的 selector 交換回來。
-  		
-  		```
-  		// Check if the method is marked as forwarded and undo that.
-	    Method targetMethod = class_getInstanceMethod(klass, selector);
-	    IMP targetMethodIMP = method_getImplementation(targetMethod);
-	    if (aspect_isMsgForwardIMP(targetMethodIMP)) {
-	        // Restore the original method implementation.
-	        const char *typeEncoding = method_getTypeEncoding(targetMethod);
-	        SEL aliasSelector = aspect_aliasForSelector(selector);
-	        Method originalMethod = class_getInstanceMethod(klass, aliasSelector);
-	        IMP originalIMP = method_getImplementation(originalMethod);
-	        NSCAssert(originalMethod, @"Original implementation for %@ not found %@ on %@", NSStringFromSelector(selector), NSStringFromSelector(aliasSelector), klass);
-	
-	        class_replaceMethod(klass, selector, originalIMP, typeEncoding);
-	        AspectLog(@"Aspects: Removed hook for -[%@ %@].", klass, NSStringFromSelector(selector));
-	    }
-  		```
-  		
-  		這裡是以類為基礎，所以假設你有同個類的兩個實例對象 hook 了同一個方法，先 remove 的會把另一個實例對象的 hook 方法也一併移除。
-  		
-  		```
-  		// Deregister global tracked selector
-    aspect_deregisterTrackedSelector(self, selector);
-  		```
-  		
-  		aspect_deregisterTrackedSelector 接著把之前提到的全局字典紀錄每個類以及對應的 AspectTracker 對象取出，並移除 selector name，selector name 底下的 sub class tracker，並從字典中移除紀錄，ㄧ樣用 for-loop 遍歷直到父類指向 NSObject，則結束。
-  		
-  		```
-  		// Get the aspect container and check if there are any hooks remaining. Clean up if there are not.
+		    const char *typeEncoding = method_getTypeEncoding(targetMethod);
+		    SEL aliasSelector = aspect_aliasForSelector(selector);
+		    Method originalMethod = class_getInstanceMethod(klass, aliasSelector);
+		    IMP originalIMP = method_getImplementation(originalMethod);
+		    NSCAssert(originalMethod, @"Original implementation for %@ not found %@ on %@", NSStringFromSelector(selector), NSStringFromSelector(aliasSelector), klass);
+		
+		    class_replaceMethod(klass, selector, originalIMP, typeEncoding);
+		    AspectLog(@"Aspects: Removed hook for -[%@ %@].", klass, NSStringFromSelector(selector));
+		    }
+		```
+		
+		這裡是以類為基礎，所以假設你有同個類的兩個實例對象 hook 了同一個方法，先 remove 的會把另一個實例對象的 hook 方法也一併移除。
+		
+		`aspect_deregisterTrackedSelector` 接著把之前提到的全局字典紀錄每個類以及對應的 AspectTracker 對象取出，並移除 selector name，selector name 底下的 sub class tracker，並從字典中移除紀錄，ㄧ樣用 for-loop 遍歷直到父類指向 NSObject，則結束。
+		
+		```
+		// Get the aspect container and check if there are any hooks remaining. Clean up if there are not.
 	    AspectsContainer *container = aspect_getContainerForObject(self, selector);
-	    
 	    if (!container.hasAspects) {
 	        // Destroy the container
 	        aspect_destroyContainerForObject(self, selector);
@@ -824,7 +813,6 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
 	            NSCAssert(originalClass != nil, @"Original class must exist");
 	            object_setClass(self, originalClass);
 	            AspectLog(@"Aspects: %@ has been restored.", NSStringFromClass(originalClass));
-	
 	            // We can only dispose the class pair if we can ensure that no instances exist using our subclass.
 	            // Since we don't globally track this, we can't ensure this - but there's also not much overhead in keeping it around.
 	            //objc_disposeClassPair(object.class);
@@ -837,12 +825,13 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
 	            }
 	        }
 	    }
-  		```
-  		
-  		aspect_destroyContainerForObject 清除了關聯對象中的 AspectsContainer。
+	    ```
+	    
+	    `aspect_destroyContainerForObject` 清除了關聯對象中的 AspectsContainer。
+	    
+	    如果類名包含了 aspect 後綴，則把後綴去除，然後把 self 的指針指向原本的類，如果不是直接調用 `aspect_undoSwizzleClassInPlace`。
 
-  		如果類名包含了 aspect 後綴，則把後綴去除，然後把 self 的指針指向原本的類，如果不是直接調用 `aspect_undoSwizzleClassInPlace`。
-	* `aspect_undoSwizzleClassInPlace：`
+	* `aspect_undoSwizzleClassInPlace`：
 
 		```
 		static void aspect_undoSwizzleClassInPlace(Class klass) {
@@ -858,7 +847,7 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
 		}
 		```
 		
-		這個`_aspect_modifySwizzledClasses` 也是之前提到的全局紀錄所有交換過的類，這邊還原了所有類的 forward invocation，並把類從全局 set 裡移除。
+		這個 `_aspect_modifySwizzledClasses` 也是之前提到的全局紀錄所有交換過的類，這邊還原了所有類的 forward invocation，並把類從全局 set 裡移除。
 
 		
 		```
