@@ -5,10 +5,10 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="shortcut icon" href="/static/img/favicon.ico" />
-    <title>PresentViewController delay on UITableViewCell - Frank's blog - Developer, coffee lover and traveler</title>
+    <title>自己打造 Autorelease Pool - Frank's blog - Developer, coffee lover and traveler</title>
     <meta name="author" content="Frank(wchuang)" />
-    <meta name="description" content="PresentViewController delay on UITableViewCell" />
-    <meta name="keywords" content="PresentViewController delay on UITableViewCell, Frank's blog - Developer, coffee lover and traveler, ios, uiview" />
+    <meta name="description" content="自己打造 Autorelease Pool" />
+    <meta name="keywords" content="自己打造 Autorelease Pool, Frank's blog - Developer, coffee lover and traveler, ios, autoreleasepool" />
     <link rel="alternate" type="application/rss+xml" title="RSS" href="/feed.xml">
     <meta content="1749788565247320" property="fb:app_id">
     <meta content="Frank's blog - Developer, coffee lover and traveler" property="og:site_name">
@@ -16,20 +16,20 @@
     
 
     
-      <meta content="PresentViewController delay on UITableViewCell" property="og:title">
+      <meta content="自己打造 Autorelease Pool" property="og:title">
       <meta content="article" property="og:type">
     
 
     
-      <meta content="presenting view controller delay on UITableViewCell" property="og:description">
+      <meta content="iOS development sharing, Swift, Objective-C" property="og:description">
     
 
     
-      <meta content="https://blog.wchuang.cc//ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html" property="og:url">
+      <meta content="https://blog.wchuang.cc//ios/autoreleasepool/2019/06/27/make-ios-autorelease-pool.html" property="og:url">
     
 
     
-      <meta content="2015-11-22T02:36:24+08:00" property="article:published_time">
+      <meta content="2019-06-27T17:26:00+08:00" property="article:published_time">
       <meta content="https://blog.wchuang.cc//about/" property="article:author">
     
 
@@ -50,15 +50,15 @@
     <meta name="twitter:creator" content="@github.io">
 
     
-      <meta name="twitter:title" content="PresentViewController delay on UITableViewCell">
+      <meta name="twitter:title" content="自己打造 Autorelease Pool">
     
 
     
-      <meta name="twitter:url" content="https://blog.wchuang.cc//ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html">
+      <meta name="twitter:url" content="https://blog.wchuang.cc//ios/autoreleasepool/2019/06/27/make-ios-autorelease-pool.html">
     
 
     
-      <meta name="twitter:description" content="presenting view controller delay on UITableViewCell">
+      <meta name="twitter:description" content="iOS development sharing, Swift, Objective-C">
     
 
     
@@ -125,32 +125,21 @@
       </div>
       <div class="col-sm-8 col-offset-1 main-layout">
         <header class="post-header">
-  <h1 class="post-title">PresentViewController delay on UITableViewCell</h1>
+  <h1 class="post-title">自己打造 Autorelease Pool</h1>
 </header>
 
-<span class="time">22 Nov 2015</span>
+<span class="time">27 Jun 2019</span>
 
   <span class="categories">
-    &raquo; <a href="/category/ios">ios</a>, <a href="/category/uiview">uiview</a>
+    &raquo; <a href="/category/ios">ios</a>, <a href="/category/autoreleasepool">autoreleasepool</a>
   </span>
 
 
 <div class="content">
-  <div class="post"><p>最近開發常常遇到：當點選 UITableViewCell 時去呼叫 presentViewController:animated:completion:，欲開啟的 view controller 會延遲出現的問題，這個似乎是 iOS 7 的 bug，不過之前開發手機卻沒什麼遇到，直到最近開發 iPad 才發現。</p>
+  <div class="post"><h2 id="overview">Overview</h2>
 
-<p>原因是當 UITableViewCell 的 selectionStyle 設為 UITableViewCellSelectionStyleNone，也就是希望不要出現點選效果時，造成沒有動畫效果去觸發 main runloop，所以 thread 好像是睡著了…</p>
+<p>當你對某個 NSObject 的實例呼叫 <code class="language-plaintext highlighter-rouge">autorelease</code> 方法，相當於呼叫了 <code class="language-plaintext highlighter-rouge">[NSAutoreleasePool addObject:self]</code> 的類方法，這個方法會把這個 object 加入 autorelease pool 裡。</p>
 
-<p>解決方式：</p>
-
-<p>在呼叫 presentViewController:animated:completion: 後</p>
-
-<ul>
-  <li>呼叫 CFRunLoopWakeUp(CFRunLoopGetCurrent())</li>
-  <li>或用 GCD 在 main queue 執行一個空的 block：dispatch_async(dispatch_get_main_queue(), ^{})</li>
-  <li>或用 GCD 在 main queue 直接呼叫 presentViewController:animated:completion:</li>
-</ul>
-
-<p>From: <a href="http://stackoverflow.com/questions/21075540/presentviewcontrolleranimatedyes-view-will-not-appear-until-user-taps-again">Stackoverflow 討論</a>, <a href="https://developer.apple.com/library/ios/documentation/Cocoa/Conceptual/Multithreading/RunLoopManagement/RunLoopManagement.html">Thread run loops</a></p>
 </div>
   <div class="share-page">
   <span style="float: left;">Share this on &rarr;&nbsp;&nbsp;</span>
@@ -160,7 +149,7 @@
   <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
 
   <!-- Facebook -->
-  <div class="fb-share-button" data-href="https://blog.wchuang.cc//ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
+  <div class="fb-share-button" data-href="https://blog.wchuang.cc//ios/autoreleasepool/2019/06/27/make-ios-autorelease-pool.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
 </div>
 
 <div id="fb-root"></div>
@@ -246,16 +235,6 @@
       
         
           
-            
-                <li class="relatedPost">
-                  <a href="https://blog.wchuang.cc//ios/autoreleasepool/2019/06/27/make-ios-autorelease-pool.html">自己打造 Autorelease Pool</a>
-                  
-                    (Categories: <a href="/category/ios">ios</a>, <a href="/category/autoreleasepool">autoreleasepool</a>)
-                  
-                </li>
-          
-          
-        
       
           
       
@@ -370,6 +349,16 @@
       
         
           
+            
+                <li class="relatedPost">
+                  <a href="https://blog.wchuang.cc//ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html">PresentViewController delay on UITableViewCell</a>
+                  
+                    (Categories: <a href="/category/ios">ios</a>, <a href="/category/uiview">uiview</a>)
+                  
+                </li>
+          
+          
+        
       
           
       
@@ -439,10 +428,10 @@
 
 <div class="PageNavigation">
   
-    <a class="prev" href="/ios/objective-c/2015/10/14/custom-nslog.html">&laquo; Custom NSLog</a>
+    <a class="prev" href="/ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html">&laquo; iOS 介面渲染及優化</a>
   
   
-    <a class="next" href="/cocoapods/2018/04/15/how-to-make-a-private-cocoapods.html">How to Make a Private CocoaPods? &raquo;</a>
+    <a class="next" href="/ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html">Atomic 原理與線程安全 &raquo;</a>
   
 </div>
 
@@ -451,8 +440,8 @@
   <script type="text/javascript">
     /* <![CDATA[ */
     var disqus_shortname = "wchuang";
-    var disqus_identifier = "https://blog.wchuang.cc/_PresentViewController delay on UITableViewCell";
-    var disqus_title = "PresentViewController delay on UITableViewCell";
+    var disqus_identifier = "https://blog.wchuang.cc/_自己打造 Autorelease Pool";
+    var disqus_title = "自己打造 Autorelease Pool";
 
     /* * * DON'T EDIT BELOW THIS LINE * * */
     (function() {
