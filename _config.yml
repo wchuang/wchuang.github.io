@@ -3,7 +3,7 @@ title: Frank's blog - Developer, coffee lover and traveler
 description: iOS development sharing, Swift, Objective-C
 author: Frank(wchuang)
 github: https://github.com/wchuang
-about: I'm Frank, an Sr. iOS Engineer, an ex-DiDier from Taiwan.
+about: I'm Frank from Taiwan, an Sr. iOS Engineer @ByteDance in Shanghai.
 disqus_shortname: wchuang
 #google_analytics: UA-XXXXXXXX-Y
 
@@ -30,10 +30,12 @@ share:
   fb_appid: 1749788565247320
 
 urls:
-    - text: About Me
-      url: /about/
-#    - text: My Projects
-#      url: /projects/
+    - text: About Me(English)
+      url: /about/en
+    - text: About Me(Chinese)
+      url: /about/zh
+    - text: My Speaking
+      url: /speaking/
     - text: XML Feed
       url: /feed.xml
 
