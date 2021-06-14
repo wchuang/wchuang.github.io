@@ -727,31 +727,32 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
 			
 		7. 如果直接取代那一段沒有正常執行，則呼叫原本方法的實現，並替換為原本的 selector
 		8. 最後，前調用、直接取代以及後調用都做完了之後，把這三個階段完成的 aspect 方法移除
+
 	* aspect_remove：
 	
 		```
 		static BOOL aspect_remove(AspectIdentifier *aspect, NSError **error) {
-	    NSCAssert([aspect isKindOfClass:AspectIdentifier.class], @"Must have correct type.");
-	
-	    __block BOOL success = NO;
-	    aspect_performLocked(^{
-	        id self = aspect.object; // strongify
-	        if (self) {
-	            AspectsContainer *aspectContainer = aspect_getContainerForObject(self, aspect.selector);
-	            success = [aspectContainer removeAspect:aspect];
-	
-	            aspect_cleanupHookedClassAndSelector(self, aspect.selector);
-	            // destroy token
-	            aspect.object = nil;
-	            aspect.block = nil;
-	            aspect.selector = NULL;
-	        }else {
-	            NSString *errrorDesc = [NSString stringWithFormat:@"Unable to deregister hook. Object already deallocated: %@", aspect];
-	            AspectError(AspectErrorRemoveObjectAlreadyDeallocated, errrorDesc);
-	        }
-	    });
-	    return success;
-	}
+		    NSCAssert([aspect isKindOfClass:AspectIdentifier.class], @"Must have correct type.");
+		
+		    __block BOOL success = NO;
+		    aspect_performLocked(^{
+		        id self = aspect.object; // strongify
+		        if (self) {
+		            AspectsContainer *aspectContainer = aspect_getContainerForObject(self, aspect.selector);
+		            success = [aspectContainer removeAspect:aspect];
+		
+		            aspect_cleanupHookedClassAndSelector(self, aspect.selector);
+		            // destroy token
+		            aspect.object = nil;
+		            aspect.block = nil;
+		            aspect.selector = NULL;
+		        }else {
+		            NSString *errrorDesc = [NSString stringWithFormat:@"Unable to deregister hook. Object already deallocated: %@", aspect];
+		            AspectError(AspectErrorRemoveObjectAlreadyDeallocated, errrorDesc);
+		        }
+		    });
+		    return success;
+		}
 		```
 		
 		remove 一樣用了一個自旋鎖保證線程安全，
@@ -767,8 +768,8 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
       	```
       	
       	清除 aspect 相關信息。
-      	
-  	* aspect_cleanupHookedClassAndSelector 這個方法也是精華所在
+
+	* aspect_cleanupHookedClassAndSelector 這個方法也是精華所在
   		
   		```
   		Class klass = object_getClass(self);
@@ -809,7 +810,7 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
   		aspect_deregisterTrackedSelector 接著把之前提到的全局字典紀錄每個類以及對應的 AspectTracker 對象取出，並移除 selector name，selector name 底下的 sub class tracker，並從字典中移除紀錄，ㄧ樣用 for-loop 遍歷直到父類指向 NSObject，則結束。
   		
   		```
-	  		// Get the aspect container and check if there are any hooks remaining. Clean up if there are not.
+  		// Get the aspect container and check if there are any hooks remaining. Clean up if there are not.
 	    AspectsContainer *container = aspect_getContainerForObject(self, selector);
 	    
 	    if (!container.hasAspects) {
@@ -839,10 +840,9 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
   		```
   		
   		aspect_destroyContainerForObject 清除了關聯對象中的 AspectsContainer。
-  		
-  		如果類名包含了 aspect 後綴，則把後綴去除，然後把 self 的指針指向原本的類，如果不是直接調用 aspect_undoSwizzleClassInPlace。
-  		
-	* aspect_undoSwizzleClassInPlace：
+
+  		如果類名包含了 aspect 後綴，則把後綴去除，然後把 self 的指針指向原本的類，如果不是直接調用 `aspect_undoSwizzleClassInPlace`。
+	* `aspect_undoSwizzleClassInPlace：`
 
 		```
 		static void aspect_undoSwizzleClassInPlace(Class klass) {
@@ -858,13 +858,16 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
 		}
 		```
 		
-		_aspect_modifySwizzledClasses 也是之前提到的全局紀錄所有交換過的類，這邊還原了所有類的 forward invocation，並把類從全局 set 裡移除。
+		這個`_aspect_modifySwizzledClasses` 也是之前提到的全局紀錄所有交換過的類，這邊還原了所有類的 forward invocation，並把類從全局 set 裡移除。
+
 		
 		```
 		static void aspect_undoSwizzleForwardInvocation(Class klass) {
 	    NSCParameterAssert(klass);
+	    
 	    Method originalMethod = class_getInstanceMethod(klass, NSSelectorFromString(AspectsForwardInvocationSelectorName));
 	    Method objectMethod = class_getInstanceMethod(NSObject.class, @selector(forwardInvocation:));
+	    
 	    // There is no class_removeMethod, so the best we can do is to retore the original implementation, or use a dummy.
 	    IMP originalImplementation = method_getImplementation(originalMethod ?: objectMethod);
 	    class_replaceMethod(klass, @selector(forwardInvocation:), originalImplementation, "v@:@");
@@ -873,21 +876,24 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
 	}
 		```
 		
-		這裡做的就是，把之前交換過的 __aspects_forwardInvocation: 以及原本類的 forwardInvocation: 方法交換回來。
-		
+		這裡做的就是，把之前交換過的 `__aspects_forwardInvocation:` 以及原本類的 `forwardInvocation:` 方法交換回來。
+
+
 	如此一來就完成了所有的清除以及 Swizzling 回復作業了。
 	
-	這裏我們了解了：
+	現在我們了解了：
 	
 	1. 怎麼產生新的 hook 類，並且與原本的類交換 invocation
-	2. __ASPECTS_ARE_BEING_CALLED__ 怎麼調用你的 block
+	2. `__ASPECTS_ARE_BEING_CALLED__` 怎麼調用你的 block
 	3. 最後如何清除以及 swizzling 還原
 
 	因為我們是從 aspect_hookClass 進入，沒想到裡面就做了這麼多事情，最後返回了一個 apsects 新建的類，我們需要拿這個產生的類做交換。
 	
-	所以讓我們再回來最一開始的 aspect_prepareClassAndHookSelector 方法。
-	
+	所以讓我們再回來最一開始的 `aspect_prepareClassAndHookSelector` 方法。
+
+
 4. aspect_prepareClassAndHookSelector 續：
+
 
 	```
 	Class klass = aspect_hookClass(self, error);
@@ -914,11 +920,14 @@ AspectTracker 用來追蹤你要 hook 的類，trackedClass 是你要 hook 的�
 	```
 	
 	如果方法實現不是走 `_objc_msgForward` 或 `_objc_msgForward_stret` 消息轉發，先把原本 selector 轉為 aspect alias selector，然後加到 aspects 新產生的類的方法列表中，接者，替換這個 selector 的方法實現為走 `_objc_msgForward` 或 `_objc_msgForward_stret` 的消息轉發機制。
+
 	
 ## 總結
+
 
 最後簡單做個總結吧，Aspects 整體思路：當你調用某個類或是某個實例對象的 hook 方法，並傳入你想 hook 的 selector，以及你要執行的 block，還有調用時機點。Aspects 會在內部產生新的 xx_aspects_ 類對象，修改 isa 指針，把你的 block 轉為自定義的 block AspectsInfo 結構體，裡面當然包含了原先的 block 以及轉換後的 block 簽名。接著，修改消息轉發流程，把 forwardInvocation hook 到 aspects_forwardInvocation，並在裡面根據具體調用時機點，調用 block 方法簽名，然後把原本類的 selector 實現改為走消息轉發方式，當類原本方法被調用的同時，實際上會經由消息轉發走到 aspects_forwardInvocation 並且調用 block。當調用完你的 block 後，會把 block 消息並且回復消息轉發機制，調用原本類的方法。
 
 Aspects 源碼也不到一千行，但裡面運用到 AOP 以及 runtime 的許多技術，十分值得我們研究一番。
 
 p.s. 這篇文章拖了好久ＲＲＲ
+
