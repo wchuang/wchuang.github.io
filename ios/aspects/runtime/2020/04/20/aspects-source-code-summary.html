@@ -25,12 +25,12 @@
     
 
     
-      <meta content="https://blog.wchuang.cc//ios/aspects/runtime/2020/04/20/aspects-source-code-summary.html" property="og:url">
+      <meta content="http://localhost:4000/ios/aspects/runtime/2020/04/20/aspects-source-code-summary.html" property="og:url">
     
 
     
       <meta content="2020-04-20T17:03:23+08:00" property="article:published_time">
-      <meta content="https://blog.wchuang.cc//about/" property="article:author">
+      <meta content="http://localhost:4000/about/" property="article:author">
     
 
     
@@ -54,7 +54,7 @@
     
 
     
-      <meta name="twitter:url" content="https://blog.wchuang.cc//ios/aspects/runtime/2020/04/20/aspects-source-code-summary.html">
+      <meta name="twitter:url" content="http://localhost:4000/ios/aspects/runtime/2020/04/20/aspects-source-code-summary.html">
     
 
     
@@ -901,173 +901,153 @@
         <p>aspect_remove：</p>
 
         <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  static BOOL aspect_remove(AspectIdentifier *aspect, NSError **error) {
-  NSCAssert([aspect isKindOfClass:AspectIdentifier.class], @"Must have correct type.");
-	
-  __block BOOL success = NO;
-  aspect_performLocked(^{
-      id self = aspect.object; // strongify
-      if (self) {
-          AspectsContainer *aspectContainer = aspect_getContainerForObject(self, aspect.selector);
-          success = [aspectContainer removeAspect:aspect];
-	
-          aspect_cleanupHookedClassAndSelector(self, aspect.selector);
-          // destroy token
-          aspect.object = nil;
-          aspect.block = nil;
-          aspect.selector = NULL;
-      }else {
-          NSString *errrorDesc = [NSString stringWithFormat:@"Unable to deregister hook. Object already deallocated: %@", aspect];
-          AspectError(AspectErrorRemoveObjectAlreadyDeallocated, errrorDesc);
-      }
-  });
-  return success;
- }
+      NSCAssert([aspect isKindOfClass:AspectIdentifier.class], @"Must have correct type.");
+		
+      __block BOOL success = NO;
+      aspect_performLocked(^{
+          id self = aspect.object; // strongify
+          if (self) {
+              AspectsContainer *aspectContainer = aspect_getContainerForObject(self, aspect.selector);
+              success = [aspectContainer removeAspect:aspect];
+		
+              aspect_cleanupHookedClassAndSelector(self, aspect.selector);
+              // destroy token
+              aspect.object = nil;
+              aspect.block = nil;
+              aspect.selector = NULL;
+          }else {
+              NSString *errrorDesc = [NSString stringWithFormat:@"Unable to deregister hook. Object already deallocated: %@", aspect];
+              AspectError(AspectErrorRemoveObjectAlreadyDeallocated, errrorDesc);
+          }
+      });
+      return success;
+  }
 </code></pre></div>        </div>
 
         <p>remove 一樣用了一個自旋鎖保證線程安全，</p>
 
         <p>先利用關聯對象拿到 AspectsContainer，移除 aspect（AspectIdentifier）以及 AspectsContainer 的關係。</p>
 
-        <p>aspect_cleanupHookedClassAndSelector 清除之前 hook 的類以及 selector。</p>
+        <p>aspect_cleanupHookedClassAndSelector 清除之前 hook 的類以及 selector。
+  並清除 aspect 相關信息。</p>
 
-        <p><code class="language-plaintext highlighter-rouge">
-  aspect.object = nil;
-	aspect.block = nil;
-	aspect.selector = NULL;
-	</code></p>
-
-        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>清除 aspect 相關信息。
+        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  aspect.object = nil;
+  aspect.block = nil;
+  aspect.selector = NULL;
 </code></pre></div>        </div>
       </li>
+      <li>
+        <p><code class="language-plaintext highlighter-rouge">aspect_cleanupHookedClassAndSelector</code> 這個方法也是精華所在</p>
+
+        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  Class klass = object_getClass(self);
+ 	BOOL isMetaClass = class_isMetaClass(klass);
+	   	
+  if (isMetaClass) {
+      klass = (Class)self;
+  }
+</code></pre></div>        </div>
+        <p>先拿到類的 isa 指針，如果指向的就是元類，則用自己，如果還不是元類，則用 isa 指針指向的類。然後拿到的類的方法實現位置，把之前交換的 aspect alias 後的 selector 與原本的 selector 交換回來。</p>
+
+        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  Method targetMethod = class_getInstanceMethod(klass, selector);
+ IMP targetMethodIMP = method_getImplementation(targetMethod);
+  		if (aspect_isMsgForwardIMP(targetMethodIMP)) {
+  		
+      const char *typeEncoding = method_getTypeEncoding(targetMethod);
+      SEL aliasSelector = aspect_aliasForSelector(selector);
+      Method originalMethod = class_getInstanceMethod(klass, aliasSelector);
+      IMP originalIMP = method_getImplementation(originalMethod);
+      NSCAssert(originalMethod, @"Original implementation for %@ not found %@ on %@", NSStringFromSelector(selector), NSStringFromSelector(aliasSelector), klass);
+		
+      class_replaceMethod(klass, selector, originalIMP, typeEncoding);
+      AspectLog(@"Aspects: Removed hook for -[%@ %@].", klass, NSStringFromSelector(selector));
+      }
+</code></pre></div>        </div>
+
+        <p>這裡是以類為基礎，所以假設你有同個類的兩個實例對象 hook 了同一個方法，先 remove 的會把另一個實例對象的 hook 方法也一併移除。</p>
+
+        <p><code class="language-plaintext highlighter-rouge">aspect_deregisterTrackedSelector</code> 接著把之前提到的全局字典紀錄每個類以及對應的 AspectTracker 對象取出，並移除 selector name，selector name 底下的 sub class tracker，並從字典中移除紀錄，ㄧ樣用 for-loop 遍歷直到父類指向 NSObject，則結束。</p>
+
+        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  // Get the aspect container and check if there are any hooks remaining. Clean up if there are not.
+  AspectsContainer *container = aspect_getContainerForObject(self, selector);
+  if (!container.hasAspects) {
+      // Destroy the container
+      aspect_destroyContainerForObject(self, selector);
+	
+      // Figure out how the class was modified to undo the changes.
+      NSString *className = NSStringFromClass(klass);
+      if ([className hasSuffix:AspectsSubclassSuffix]) {
+          Class originalClass = NSClassFromString([className stringByReplacingOccurrencesOfString:AspectsSubclassSuffix withString:@""]);
+          NSCAssert(originalClass != nil, @"Original class must exist");
+          object_setClass(self, originalClass);
+          AspectLog(@"Aspects: %@ has been restored.", NSStringFromClass(originalClass));
+          // We can only dispose the class pair if we can ensure that no instances exist using our subclass.
+          // Since we don't globally track this, we can't ensure this - but there's also not much overhead in keeping it around.
+          //objc_disposeClassPair(object.class);
+      }else {
+          // Class is most likely swizzled in place. Undo that.
+          if (isMetaClass) {
+              aspect_undoSwizzleClassInPlace((Class)self);
+          }else if (self.class != klass) {
+          	aspect_undoSwizzleClassInPlace(klass);
+          }
+      }
+  }
+</code></pre></div>        </div>
+
+        <p><code class="language-plaintext highlighter-rouge">aspect_destroyContainerForObject</code> 清除了關聯對象中的 AspectsContainer。</p>
+
+        <p>如果類名包含了 aspect 後綴，則把後綴去除，然後把 self 的指針指向原本的類，如果不是直接調用 <code class="language-plaintext highlighter-rouge">aspect_undoSwizzleClassInPlace</code>。</p>
+      </li>
+      <li>
+        <p><code class="language-plaintext highlighter-rouge">aspect_undoSwizzleClassInPlace</code>：</p>
+
+        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  static void aspect_undoSwizzleClassInPlace(Class klass) {
+  NSCParameterAssert(klass);
+  NSString *className = NSStringFromClass(klass);
+	
+  _aspect_modifySwizzledClasses(^(NSMutableSet *swizzledClasses) {
+      if ([swizzledClasses containsObject:className]) {
+          aspect_undoSwizzleForwardInvocation(klass);
+          [swizzledClasses removeObject:className];
+      }
+  });
+  }
+</code></pre></div>        </div>
+
+        <p>這個 <code class="language-plaintext highlighter-rouge">_aspect_modifySwizzledClasses</code> 也是之前提到的全局紀錄所有交換過的類，這邊還原了所有類的 forward invocation，並把類從全局 set 裡移除。</p>
+
+        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  static void aspect_undoSwizzleForwardInvocation(Class klass) {
+  NSCParameterAssert(klass);
+	    
+  Method originalMethod = class_getInstanceMethod(klass, NSSelectorFromString(AspectsForwardInvocationSelectorName));
+  Method objectMethod = class_getInstanceMethod(NSObject.class, @selector(forwardInvocation:));
+	    
+  // There is no class_removeMethod, so the best we can do is to retore the original implementation, or use a dummy.
+  IMP originalImplementation = method_getImplementation(originalMethod ?: objectMethod);
+  class_replaceMethod(klass, @selector(forwardInvocation:), originalImplementation, "v@:@");
+	
+  AspectLog(@"Aspects: %@ has been restored.", NSStringFromClass(klass));
+ }
+</code></pre></div>        </div>
+
+        <p>這裡做的就是，把之前交換過的 <code class="language-plaintext highlighter-rouge">__aspects_forwardInvocation:</code> 以及原本類的 <code class="language-plaintext highlighter-rouge">forwardInvocation:</code> 方法交換回來。</p>
+      </li>
     </ul>
+
+    <p>如此一來就完成了所有的清除以及 Swizzling 回復作業了。</p>
+
+    <p>現在我們了解了：</p>
+
+    <ol>
+      <li>怎麼產生新的 hook 類，並且與原本的類交換 invocation</li>
+      <li><code class="language-plaintext highlighter-rouge">__ASPECTS_ARE_BEING_CALLED__</code> 怎麼調用你的 block</li>
+      <li>最後如何清除以及 swizzling 還原</li>
+    </ol>
+
+    <p>因為我們是從 aspect_hookClass 進入，沒想到裡面就做了這麼多事情，最後返回了一個 apsects 新建的類，我們需要拿這個產生的類做交換。</p>
+
+    <p>所以讓我們再回來最一開始的 <code class="language-plaintext highlighter-rouge">aspect_prepareClassAndHookSelector</code> 方法。</p>
   </li>
-</ol>
-
-  	* aspect_cleanupHookedClassAndSelector 這個方法也是精華所在
-
-  		```
-  		Class klass = object_getClass(self);
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>   	BOOL isMetaClass = class_isMetaClass(klass);
-    if (isMetaClass) {
-        klass = (Class)self;
-    }
-  		```
-</code></pre></div></div>
-
-  		先拿到類的 isa 指針，如果指向的就是元類，則用自己，如果還不是元類，則用 isa 指針指向的類。
-
-  		然後拿到的類的方法實現位置，把之前交換的 aspect alias 後的 selector 與原本的 selector 交換回來。
-
-  		```
-  		// Check if the method is marked as forwarded and undo that.
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    Method targetMethod = class_getInstanceMethod(klass, selector);
-    IMP targetMethodIMP = method_getImplementation(targetMethod);
-    if (aspect_isMsgForwardIMP(targetMethodIMP)) {
-        // Restore the original method implementation.
-        const char *typeEncoding = method_getTypeEncoding(targetMethod);
-        SEL aliasSelector = aspect_aliasForSelector(selector);
-        Method originalMethod = class_getInstanceMethod(klass, aliasSelector);
-        IMP originalIMP = method_getImplementation(originalMethod);
-        NSCAssert(originalMethod, @"Original implementation for %@ not found %@ on %@", NSStringFromSelector(selector), NSStringFromSelector(aliasSelector), klass);
-
-        class_replaceMethod(klass, selector, originalIMP, typeEncoding);
-        AspectLog(@"Aspects: Removed hook for -[%@ %@].", klass, NSStringFromSelector(selector));
-    }
-  		```
-</code></pre></div></div>
-
-  		這裡是以類為基礎，所以假設你有同個類的兩個實例對象 hook 了同一個方法，先 remove 的會把另一個實例對象的 hook 方法也一併移除。
-
-  		```
-  		// Deregister global tracked selector
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aspect_deregisterTrackedSelector(self, selector);
-  		```
-</code></pre></div></div>
-
-  		aspect_deregisterTrackedSelector 接著把之前提到的全局字典紀錄每個類以及對應的 AspectTracker 對象取出，並移除 selector name，selector name 底下的 sub class tracker，並從字典中移除紀錄，ㄧ樣用 for-loop 遍歷直到父類指向 NSObject，則結束。
-
-  		```
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  		// Get the aspect container and check if there are any hooks remaining. Clean up if there are not.
-    AspectsContainer *container = aspect_getContainerForObject(self, selector);
-    
-    if (!container.hasAspects) {
-        // Destroy the container
-        aspect_destroyContainerForObject(self, selector);
-
-        // Figure out how the class was modified to undo the changes.
-        NSString *className = NSStringFromClass(klass);
-        if ([className hasSuffix:AspectsSubclassSuffix]) {
-            Class originalClass = NSClassFromString([className stringByReplacingOccurrencesOfString:AspectsSubclassSuffix withString:@""]);
-            NSCAssert(originalClass != nil, @"Original class must exist");
-            object_setClass(self, originalClass);
-            AspectLog(@"Aspects: %@ has been restored.", NSStringFromClass(originalClass));
-
-            // We can only dispose the class pair if we can ensure that no instances exist using our subclass.
-            // Since we don't globally track this, we can't ensure this - but there's also not much overhead in keeping it around.
-            //objc_disposeClassPair(object.class);
-        }else {
-            // Class is most likely swizzled in place. Undo that.
-            if (isMetaClass) {
-                aspect_undoSwizzleClassInPlace((Class)self);
-            }else if (self.class != klass) {
-            	aspect_undoSwizzleClassInPlace(klass);
-            }
-        }
-    }
-  		```
-</code></pre></div></div>
-
-  		aspect_destroyContainerForObject 清除了關聯對象中的 AspectsContainer。
-
-  		如果類名包含了 aspect 後綴，則把後綴去除，然後把 self 的指針指向原本的類，如果不是直接調用 aspect_undoSwizzleClassInPlace。
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>* aspect_undoSwizzleClassInPlace：
-
-	```
-	static void aspect_undoSwizzleClassInPlace(Class klass) {
-    NSCParameterAssert(klass);
-    NSString *className = NSStringFromClass(klass);
-
-    _aspect_modifySwizzledClasses(^(NSMutableSet *swizzledClasses) {
-        if ([swizzledClasses containsObject:className]) {
-            aspect_undoSwizzleForwardInvocation(klass);
-            [swizzledClasses removeObject:className];
-        }
-    });
-	}
-	```
-	
-	_aspect_modifySwizzledClasses 也是之前提到的全局紀錄所有交換過的類，這邊還原了所有類的 forward invocation，並把類從全局 set 裡移除。
-	
-	```
-	static void aspect_undoSwizzleForwardInvocation(Class klass) {
-    NSCParameterAssert(klass);
-    Method originalMethod = class_getInstanceMethod(klass, NSSelectorFromString(AspectsForwardInvocationSelectorName));
-    Method objectMethod = class_getInstanceMethod(NSObject.class, @selector(forwardInvocation:));
-    // There is no class_removeMethod, so the best we can do is to retore the original implementation, or use a dummy.
-    IMP originalImplementation = method_getImplementation(originalMethod ?: objectMethod);
-    class_replaceMethod(klass, @selector(forwardInvocation:), originalImplementation, "v@:@");
-
-    AspectLog(@"Aspects: %@ has been restored.", NSStringFromClass(klass));
-}
-	```
-	
-	這裡做的就是，把之前交換過的 __aspects_forwardInvocation: 以及原本類的 forwardInvocation: 方法交換回來。
-	
-如此一來就完成了所有的清除以及 Swizzling 回復作業了。
-
-這裏我們了解了：
-
-1. 怎麼產生新的 hook 類，並且與原本的類交換 invocation
-2. __ASPECTS_ARE_BEING_CALLED__ 怎麼調用你的 block
-3. 最後如何清除以及 swizzling 還原
-
-因為我們是從 aspect_hookClass 進入，沒想到裡面就做了這麼多事情，最後返回了一個 apsects 新建的類，我們需要拿這個產生的類做交換。
-
-所以讓我們再回來最一開始的 aspect_prepareClassAndHookSelector 方法。
-</code></pre></div></div>
-
-<ol>
   <li>
     <p>aspect_prepareClassAndHookSelector 續：</p>
 
@@ -1104,6 +1084,7 @@
 <p>Aspects 源碼也不到一千行，但裡面運用到 AOP 以及 runtime 的許多技術，十分值得我們研究一番。</p>
 
 <p>p.s. 這篇文章拖了好久ＲＲＲ</p>
+
 </div>
   <div class="share-page">
   <span style="float: left;">Share this on &rarr;&nbsp;&nbsp;</span>
@@ -1113,7 +1094,7 @@
   <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
 
   <!-- Facebook -->
-  <div class="fb-share-button" data-href="https://blog.wchuang.cc//ios/aspects/runtime/2020/04/20/aspects-source-code-summary.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
+  <div class="fb-share-button" data-href="http://localhost:4000/ios/aspects/runtime/2020/04/20/aspects-source-code-summary.html" data-layout="button_count" style="position: relative; top: -8px; left: 3px;"></div>
 </div>
 
 <div id="fb-root"></div>
@@ -1166,7 +1147,7 @@
               <ul>
             
                 <li class="relatedPost">
-                  <a href="https://blog.wchuang.cc//ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html">Atomic 原理與線程安全</a>
+                  <a href="http://localhost:4000/ios/atomic/thread/2019/07/04/atomic-thread-safe-or-not.html">Atomic 原理與線程安全</a>
                   
                     (Categories: <a href="/category/ios">ios</a>, <a href="/category/atomic">atomic</a>, <a href="/category/thread">thread</a>)
                   
@@ -1203,7 +1184,7 @@
           
             
                 <li class="relatedPost">
-                  <a href="https://blog.wchuang.cc//ios/autoreleasepool/2019/06/27/make-ios-autorelease-pool.html">自己打造 Autorelease Pool</a>
+                  <a href="http://localhost:4000/ios/autoreleasepool/2019/06/27/make-ios-autorelease-pool.html">自己打造 Autorelease Pool</a>
                   
                     (Categories: <a href="/category/ios">ios</a>, <a href="/category/autoreleasepool">autoreleasepool</a>)
                   
@@ -1232,7 +1213,7 @@
           
             
                 <li class="relatedPost">
-                  <a href="https://blog.wchuang.cc//ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html">iOS 介面渲染及優化</a>
+                  <a href="http://localhost:4000/ios/performance/2019/06/24/ios-interfaces-rendering-and-refactor.html">iOS 介面渲染及優化</a>
                   
                     (Categories: <a href="/category/ios">ios</a>, <a href="/category/performance">performance</a>)
                   
@@ -1269,7 +1250,7 @@
           
             
                 <li class="relatedPost">
-                  <a href="https://blog.wchuang.cc//swift/ios/2019/03/02/autoclosure-swift-apis.html">如何使用 @autoclosure 設計 Swift APIs</a>
+                  <a href="http://localhost:4000/swift/ios/2019/03/02/autoclosure-swift-apis.html">如何使用 @autoclosure 設計 Swift APIs</a>
                   
                     (Categories: <a href="/category/swift">swift</a>, <a href="/category/ios">ios</a>)
                   
@@ -1306,7 +1287,7 @@
           
             
                 <li class="relatedPost">
-                  <a href="https://blog.wchuang.cc//gcd/swift/ios/2018/11/04/swift-gcd.html">那些你很少用的 Swift GCD 方法</a>
+                  <a href="http://localhost:4000/gcd/swift/ios/2018/11/04/swift-gcd.html">那些你很少用的 Swift GCD 方法</a>
                   
                     (Categories: <a href="/category/gcd">gcd</a>, <a href="/category/swift">swift</a>, <a href="/category/ios">ios</a>)
                   
@@ -1349,7 +1330,7 @@
           
             
                 <li class="relatedPost">
-                  <a href="https://blog.wchuang.cc//ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html">PresentViewController delay on UITableViewCell</a>
+                  <a href="http://localhost:4000/ios/uiview/2015/11/22/presentviewcontroller-delay-on-uitableviewcell.html">PresentViewController delay on UITableViewCell</a>
                   
                     (Categories: <a href="/category/ios">ios</a>, <a href="/category/uiview">uiview</a>)
                   
@@ -1454,7 +1435,7 @@
   <script type="text/javascript">
     /* <![CDATA[ */
     var disqus_shortname = "wchuang";
-    var disqus_identifier = "https://blog.wchuang.cc/_Aspects 源碼梳理";
+    var disqus_identifier = "http://localhost:4000_Aspects 源碼梳理";
     var disqus_title = "Aspects 源碼梳理";
 
     /* * * DON'T EDIT BELOW THIS LINE * * */
