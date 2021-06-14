@@ -35,7 +35,7 @@ urls:
     - text: About Me(Chinese)
       url: /about/zh
     - text: My Speaking
-      url: /speaking/
+      url: /speaking.html
     - text: XML Feed
       url: /feed.xml
 
